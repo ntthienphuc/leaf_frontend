@@ -299,10 +299,10 @@
           </h3>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- API Connection URL -->
-            <div class="flex flex-col gap-1.5">
+            <!-- API Connection URL (Hidden per user request) -->
+            <div class="hidden flex-col gap-1.5">
               <label for="input-ws-url" class="text-[11px] text-zinc-500 font-bold">API Connection URL</label>
-              <input type="text" id="input-ws-url" value="wss://thienphuc12339-leaf.hf.space/ws/detect" placeholder="ws://..." class="w-full text-xs bg-zinc-50 border-2 border-pastel-border rounded-xl px-3.5 py-2 text-zinc-700 outline-none focus:border-pastel-green/50 font-mono transition" />
+              <input type="text" id="input-ws-url" value="wss://thienphuc12339-leaf.hf.space/ws/detect" class="w-full text-xs bg-zinc-50 border-2 border-pastel-border rounded-xl px-3.5 py-2" />
             </div>
 
             <!-- Camera Selection -->
@@ -765,7 +765,7 @@
         return wsUrl
           .replace(/^wss:\/\//i, "https://")
           .replace(/^ws:\/\//i, "http://")
-          .split("/ws/")[0];
+          .replace(/\/detect\/?$/, ""); // Removes /detect from the end
       }
 
       // Connect WebSocket
@@ -1284,6 +1284,30 @@
 
       btnStartOverlay.onclick = () => {
         startCamera();
+      };
+
+      // Theater Mode Toggle (Full Screen Camera)
+      btnTheaterToggle.onclick = () => {
+        isTheaterMode = !isTheaterMode;
+        if (isTheaterMode) {
+          viewportBox.classList.remove("h-[60vh]", "xs:h-[65vh]", "sm:h-[70vh]", "md:h-auto", "md:aspect-video");
+          viewportBox.classList.add("fixed", "inset-0", "z-[100]", "h-screen", "w-screen", "bg-black");
+          iconTheaterExpand.classList.add("hidden");
+          iconTheaterCollapse.classList.remove("hidden");
+          // Hide HUD and other elements when full screen or reposition them?
+          // Keeping HUD visible might be nice, let's just make sure z-index is high enough.
+        } else {
+          viewportBox.classList.remove("fixed", "inset-0", "z-[100]", "h-screen", "w-screen", "bg-black");
+          viewportBox.classList.add("h-[60vh]", "xs:h-[65vh]", "sm:h-[70vh]", "md:h-auto", "md:aspect-video");
+          iconTheaterCollapse.classList.add("hidden");
+          iconTheaterExpand.classList.remove("hidden");
+        }
+        
+        // Re-calculate overlay size
+        if (video.videoWidth) {
+          overlay.width = video.videoWidth;
+          overlay.height = video.videoHeight;
+        }
       };
 
       // Reset tracker state
