@@ -333,6 +333,20 @@
       const savedRes = localStorage.getItem("leafsense_resolution");
       if (savedRes) selectResolution.value = savedRes;
 
+      // Fetch Vercel environment variables dynamically
+      fetch("/api/config")
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.WS_URL) {
+            // If localStorage is empty, or the user hasn't overridden it, use Vercel env variable
+            if (!savedWsUrl) {
+              inputWsUrl.value = data.WS_URL;
+            }
+            console.log("Vercel config loaded, WS_URL:", data.WS_URL);
+          }
+        })
+        .catch(err => console.log("Failed to fetch Vercel config, using default:", err));
+
       // Initialize Lucide Icons
       lucide.createIcons();
 
