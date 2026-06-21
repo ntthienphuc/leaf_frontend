@@ -106,10 +106,10 @@
     </header>
 
     <!-- Main Content Grid -->
-    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-7xl mx-auto w-full">
+    <main id="main-grid" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-[1440px] mx-auto w-full">
       
-      <!-- Left Panel (7 cols): Mode Toggles, Video/Preview Viewport, Settings -->
-      <div class="lg:col-span-7 flex flex-col gap-6">
+      <!-- Left Panel (8 cols): Mode Toggles, Video/Preview Viewport, Settings -->
+      <div id="left-panel" class="lg:col-span-8 flex flex-col gap-6 transition-all duration-300">
         
         <!-- Mode Switcher Pills -->
         <div class="bg-white border-4 border-pastel-border rounded-3xl p-2.5 flex gap-2">
@@ -134,7 +134,15 @@
           <div class="aspect-video w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border">
             
             <!-- Visible Display Canvas -->
-            <canvas id="overlay" class="w-full h-full max-h-[460px] object-contain"></canvas>
+            <canvas id="overlay" class="w-full h-full max-h-[460px] lg:max-h-[640px] object-contain transition-all duration-300"></canvas>
+            
+            <!-- Floating Focus Mode Toggle (top-right) -->
+            <div class="absolute top-4 right-4 z-20 flex gap-2">
+              <button id="btn-theater-toggle" class="p-2.5 rounded-xl bg-white/90 backdrop-blur-sm border-2 border-pastel-border text-zinc-600 hover:text-pastel-green hover:bg-white active:scale-95 transition-all shadow-md flex items-center justify-center cursor-pointer pointer-events-auto" title="Toggle Full Screen Focus">
+                <i data-lucide="expand" class="w-4 h-4 text-zinc-600" id="icon-theater-expand"></i>
+                <i data-lucide="minimize-2" class="w-4 h-4 text-zinc-600 hidden" id="icon-theater-collapse"></i>
+              </button>
+            </div>
             
             <!-- Drag & Drop Upload Overlay -->
             <div id="upload-container" class="absolute inset-0 bg-pastel-cream/90 flex flex-col items-center justify-center p-6 text-center border-4 border-dashed border-pastel-green/40 m-4 rounded-2xl transition cursor-pointer hidden hover:bg-pastel-greenLight/20">
@@ -268,8 +276,8 @@
 
       </div>
 
-      <!-- Right Panel (5 cols): Diagnostic cards and crop histories -->
-      <div class="lg:col-span-5 flex flex-col gap-6">
+      <!-- Right Panel (4 cols): Diagnostic cards and crop histories -->
+      <div id="right-panel" class="lg:col-span-4 flex flex-col gap-6 transition-all duration-300">
 
         <!-- Performance Summary Card -->
         <div class="bg-white border-4 border-pastel-border rounded-3xl p-5">
@@ -381,6 +389,13 @@
       const trackedCounter = document.getElementById("tracked-counter");
       const targetList = document.getElementById("target-list");
       const targetEmptyState = document.getElementById("target-empty-state");
+      
+      const btnTheaterToggle = document.getElementById("btn-theater-toggle");
+      const iconTheaterExpand = document.getElementById("icon-theater-expand");
+      const iconTheaterCollapse = document.getElementById("icon-theater-collapse");
+      const leftPanel = document.getElementById("left-panel");
+      const rightPanel = document.getElementById("right-panel");
+      let isTheaterMode = false;
 
       // App State
       let currentMode = 'realtime'; // 'realtime' | 'snapshot' | 'upload'
@@ -416,6 +431,32 @@
       }
       const savedRes = localStorage.getItem("leafsense_resolution");
       if (savedRes) selectResolution.value = savedRes;
+
+      // Theater Mode Toggle click handler
+      btnTheaterToggle.onclick = () => {
+        isTheaterMode = !isTheaterMode;
+        if (isTheaterMode) {
+          rightPanel.classList.add("hidden");
+          leftPanel.className = "lg:col-span-12 flex flex-col gap-6 transition-all duration-300";
+          iconTheaterExpand.classList.add("hidden");
+          iconTheaterCollapse.classList.remove("hidden");
+          showToast("Focus mode enabled", "success");
+        } else {
+          rightPanel.classList.remove("hidden");
+          leftPanel.className = "lg:col-span-8 flex flex-col gap-6 transition-all duration-300";
+          iconTheaterExpand.classList.remove("hidden");
+          iconTheaterCollapse.classList.add("hidden");
+          showToast("Focus mode disabled");
+        }
+        
+        // Force canvas resize calculations on next tick
+        setTimeout(() => {
+          if (overlay) {
+            overlay.width = video.videoWidth || overlay.width;
+            overlay.height = video.videoHeight || overlay.height;
+          }
+        }, 100);
+      };
 
       // Initialize Lucide Icons
       lucide.createIcons();
