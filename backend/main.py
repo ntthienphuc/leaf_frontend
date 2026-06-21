@@ -85,6 +85,7 @@ def read_root():
 
 
 @app.get("/health")
+@app.get("/ws/health")
 def health() -> dict:
     pipeline = get_pipeline()
     return {
@@ -97,11 +98,13 @@ def health() -> dict:
 
 
 @app.get("/classes")
+@app.get("/ws/classes")
 def classes() -> dict:
     return {"classes": get_pipeline().classifier.class_names}
 
 
 @app.post("/predict/image")
+@app.post("/ws/predict/image")
 async def predict_image(file: UploadFile = File(...), tracker: bool = False) -> dict:
     image_bytes = await file.read()
     frame = decode_image_bytes(image_bytes)
@@ -109,6 +112,7 @@ async def predict_image(file: UploadFile = File(...), tracker: bool = False) -> 
 
 
 @app.post("/tracker/reset")
+@app.post("/ws/tracker/reset")
 def reset_tracker() -> dict:
     get_pipeline().reset_tracker()
     return {"ok": True}
