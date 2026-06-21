@@ -79,48 +79,48 @@
   <body class="bg-pastel-bg text-zinc-800 font-sans min-h-screen flex flex-col antialiased selection:bg-green-200 selection:text-green-800">
     
     <!-- Top Header -->
-    <header class="border-b-4 border-pastel-border bg-white sticky top-0 z-40 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
-      <div class="flex items-center gap-3">
-        <div class="h-11 w-11 rounded-2xl bg-gradient-to-tr from-green-400 to-emerald-300 flex items-center justify-center shadow-md border-2 border-green-500/20">
-          <i data-lucide="leaf" class="text-white w-6 h-6 fill-current"></i>
+    <header class="border-b-4 border-pastel-border bg-white sticky top-0 z-40 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="h-10 w-10 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-green-400 to-emerald-300 flex items-center justify-center shadow-md border-2 border-green-500/20">
+          <i data-lucide="leaf" class="text-white w-5 h-5 sm:w-6 sm:h-6 fill-current"></i>
         </div>
         <div>
-          <h1 class="text-xl font-bold tracking-tight text-pastel-greenDark font-display flex items-center gap-2">
-            LeafyCare <span class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full border border-green-300/40 font-semibold font-sans">AI Diagnostics 🍃</span>
+          <h1 class="text-base sm:text-xl font-bold tracking-tight text-pastel-greenDark font-display flex items-center gap-1.5 sm:gap-2">
+            LeafyCare <span class="bg-green-100 text-green-700 text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full border border-green-300/40 font-semibold font-sans">AI Diagnostics 🍃</span>
           </h1>
-          <p class="text-[11px] text-zinc-500 font-medium">YOLO26 Leaf Tracker & Classifier Dashboard</p>
+          <p class="text-[9px] sm:text-[11px] text-zinc-500 font-medium">YOLO26 Leaf Tracker & Classifier Dashboard</p>
         </div>
       </div>
       
       <!-- Right Header Actions / Status -->
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-pastel-greenLight border-2 border-pastel-border text-xs font-semibold text-pastel-greenDark">
-          <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-pastel-greenLight border-2 border-pastel-border text-[10px] sm:text-xs font-semibold text-pastel-greenDark">
+          <i data-lucide="cpu" class="w-3 sm:w-3.5 h-3 sm:h-3.5"></i>
           <span>Device: <span id="backend-device" class="font-bold uppercase">unknown</span></span>
         </div>
-        <div id="status-badge" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-100 border-2 border-zinc-200 text-xs font-bold text-zinc-600 transition-all duration-300">
-          <span class="h-2.5 w-2.5 rounded-full bg-zinc-400 animate-pulse" id="status-dot"></span>
+        <div id="status-badge" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-zinc-100 border-2 border-zinc-200 text-[10px] sm:text-xs font-bold text-zinc-600 transition-all duration-300">
+          <span class="h-2 sm:h-2.5 w-2 sm:w-2.5 rounded-full bg-zinc-400 animate-pulse" id="status-dot"></span>
           <span id="status-text">Disconnected</span>
         </div>
       </div>
     </header>
 
     <!-- Main Content Grid -->
-    <main id="main-grid" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-[1440px] mx-auto w-full">
+    <main id="main-grid" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 p-4 sm:p-6 max-w-[1440px] mx-auto w-full">
       
       <!-- Left Panel (8 cols): Mode Toggles, Video/Preview Viewport, Settings -->
       <div id="left-panel" class="lg:col-span-8 flex flex-col gap-6 transition-all duration-300">
         
         <!-- Mode Switcher Pills -->
-        <div class="bg-white border-4 border-pastel-border rounded-3xl p-2.5 flex gap-2">
-          <button id="btn-mode-realtime" class="flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-transparent bg-pastel-green text-white shadow-sm" onclick="switchMode('realtime')">
-            <i data-lucide="video" class="w-4 h-4"></i> Live Camera
+        <div class="bg-white border-4 border-pastel-border rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 flex flex-row gap-1.5 sm:gap-2 overflow-x-auto">
+          <button id="btn-mode-realtime" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-display font-semibold text-[11px] sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2 border-2 border-transparent bg-pastel-green text-white shadow-sm whitespace-nowrap" onclick="switchMode('realtime')">
+            <i data-lucide="video" class="w-3.5 sm:w-4 h-3.5 sm:h-4"></i> Live Camera
           </button>
-          <button id="btn-mode-snapshot" class="flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-pastel-border bg-white text-zinc-600 hover:bg-zinc-50" onclick="switchMode('snapshot')">
-            <i data-lucide="camera" class="w-4 h-4"></i> Take Photo
+          <button id="btn-mode-snapshot" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-display font-semibold text-[11px] sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2 border-2 border-pastel-border bg-white text-zinc-600 hover:bg-zinc-50 whitespace-nowrap" onclick="switchMode('snapshot')">
+            <i data-lucide="camera" class="w-3.5 sm:w-4 h-3.5 sm:h-4"></i> Take Photo
           </button>
-          <button id="btn-mode-upload" class="flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-pastel-border bg-white text-zinc-600 hover:bg-zinc-50" onclick="switchMode('upload')">
-            <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload Image
+          <button id="btn-mode-upload" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-display font-semibold text-[11px] sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2 border-2 border-pastel-border bg-white text-zinc-600 hover:bg-zinc-50 whitespace-nowrap" onclick="switchMode('upload')">
+            <i data-lucide="upload-cloud" class="w-3.5 sm:w-4 h-3.5 sm:h-4"></i> Upload Image
           </button>
         </div>
         
@@ -131,16 +131,16 @@
           <video id="video" autoplay muted playsinline class="hidden"></video>
           
           <!-- Viewport Box -->
-          <div class="aspect-video w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border">
+          <div class="w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border h-[280px] xs:h-[340px] sm:h-[400px] md:h-auto md:aspect-video transition-all duration-300">
             
             <!-- Visible Display Canvas -->
-            <canvas id="overlay" class="w-full h-full max-h-[460px] lg:max-h-[640px] object-contain transition-all duration-300"></canvas>
+            <canvas id="overlay" class="w-full h-full object-contain transition-all duration-300"></canvas>
             
             <!-- Floating Focus Mode Toggle (top-right) -->
             <div class="absolute top-4 right-4 z-20 flex gap-2">
-              <button id="btn-theater-toggle" class="p-2.5 rounded-xl bg-white/90 backdrop-blur-sm border-2 border-pastel-border text-zinc-600 hover:text-pastel-green hover:bg-white active:scale-95 transition-all shadow-md flex items-center justify-center cursor-pointer pointer-events-auto" title="Toggle Full Screen Focus">
-                <i data-lucide="expand" class="w-4 h-4 text-zinc-600" id="icon-theater-expand"></i>
-                <i data-lucide="minimize-2" class="w-4 h-4 text-zinc-600 hidden" id="icon-theater-collapse"></i>
+              <button id="btn-theater-toggle" class="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-white/90 backdrop-blur-sm border-2 border-pastel-border text-zinc-600 hover:text-pastel-green hover:bg-white active:scale-95 transition-all shadow-md flex items-center justify-center cursor-pointer pointer-events-auto" title="Toggle Full Screen Focus">
+                <i data-lucide="expand" class="w-3.5 sm:w-4 h-3.5 sm:h-4 text-zinc-600" id="icon-theater-expand"></i>
+                <i data-lucide="minimize-2" class="w-3.5 sm:w-4 h-3.5 sm:h-4 text-zinc-600 hidden" id="icon-theater-collapse"></i>
               </button>
             </div>
             
@@ -194,39 +194,39 @@
           </div>
           
           <!-- Bottom Controls Area -->
-          <div class="px-5 py-4 bg-pastel-cream/50 flex flex-wrap items-center justify-between gap-4">
+          <div class="px-3 sm:px-5 py-3 sm:py-4 bg-pastel-cream/50 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
             <!-- Mode 1: Live Controls -->
-            <div id="controls-realtime" class="flex items-center gap-3">
-              <button id="btn-stream-toggle" class="p-3 rounded-xl bg-pastel-green border-2 border-green-600/10 text-white font-bold transition active:scale-95 flex items-center justify-center cute-shadow-btn" title="Play/Pause camera stream">
-                <i data-lucide="play" class="w-5 h-5 fill-current" id="icon-stream-play"></i>
-                <i data-lucide="square" class="w-5 h-5 fill-current hidden" id="icon-stream-stop"></i>
+            <div id="controls-realtime" class="flex items-center gap-2 sm:gap-3">
+              <button id="btn-stream-toggle" class="p-2.5 sm:p-3 rounded-xl bg-pastel-green border-2 border-green-600/10 text-white font-bold transition active:scale-95 flex items-center justify-center cute-shadow-btn" title="Play/Pause camera stream">
+                <i data-lucide="play" class="w-4 sm:w-5 h-4 sm:h-5 fill-current" id="icon-stream-play"></i>
+                <i data-lucide="square" class="w-4 sm:w-5 h-4 sm:h-5 fill-current hidden" id="icon-stream-stop"></i>
               </button>
-              <button id="btn-reset-tracker" class="px-4 py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-xs transition active:scale-95 flex items-center gap-1.5">
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Clear Tracker
+              <button id="btn-reset-tracker" class="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-[10px] sm:text-xs transition active:scale-95 flex items-center gap-1 sm:gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3 sm:w-3.5 h-3 sm:h-3.5"></i> Clear Tracker
               </button>
             </div>
             
             <!-- Mode 2: Snapshot Controls -->
-            <div id="controls-snapshot" class="hidden flex items-center gap-3">
-              <button id="btn-capture-action" class="px-5 py-2.5 rounded-xl bg-pastel-green border-2 border-green-600/10 text-white font-bold text-xs transition active:scale-95 flex items-center gap-1.5 cute-shadow-btn">
-                <i data-lucide="camera" class="w-4 h-4 fill-current"></i> Capture & Analyze
+            <div id="controls-snapshot" class="hidden flex items-center gap-2 sm:gap-3">
+              <button id="btn-capture-action" class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-pastel-green border-2 border-green-600/10 text-white font-bold text-[10px] sm:text-xs transition active:scale-95 flex items-center gap-1 sm:gap-1.5 cute-shadow-btn">
+                <i data-lucide="camera" class="w-3.5 sm:w-4 h-3.5 sm:h-4 fill-current"></i> Capture & Analyze
               </button>
-              <button id="btn-retake-action" class="px-5 py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-xs transition active:scale-95 flex items-center gap-1.5 hidden">
-                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Retake Photo
+              <button id="btn-retake-action" class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-[10px] sm:text-xs transition active:scale-95 flex items-center gap-1 sm:gap-1.5 hidden">
+                <i data-lucide="rotate-ccw" class="w-3.5 sm:w-4 h-3.5 sm:h-4"></i> Retake
               </button>
             </div>
 
             <!-- Mode 3: Upload Controls -->
-            <div id="controls-upload" class="hidden flex items-center gap-3">
-              <button id="btn-clear-upload" class="px-5 py-2.5 rounded-xl bg-rose-100 border-2 border-rose-200 text-rose-700 font-bold text-xs transition active:scale-95 flex items-center gap-1.5 hidden">
-                <i data-lucide="trash-2" class="w-4 h-4"></i> Clear Image
+            <div id="controls-upload" class="hidden flex items-center gap-2 sm:gap-3">
+              <button id="btn-clear-upload" class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-rose-100 border-2 border-rose-200 text-rose-700 font-bold text-[10px] sm:text-xs transition active:scale-95 flex items-center gap-1 sm:gap-1.5 hidden">
+                <i data-lucide="trash-2" class="w-3.5 sm:w-4 h-3.5 sm:h-4"></i> Clear Image
               </button>
             </div>
             
             <!-- Global Frame Download -->
             <div>
-              <button id="btn-snapshot" class="px-4 py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-xs transition active:scale-95 flex items-center gap-1.5" title="Download snapshot">
-                <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Image
+              <button id="btn-snapshot" class="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-[10px] sm:text-xs transition active:scale-95 flex items-center gap-1 sm:gap-1.5" title="Download snapshot">
+                <i data-lucide="download" class="w-3 sm:w-3.5 h-3 sm:h-3.5"></i> Download
               </button>
             </div>
           </div>
