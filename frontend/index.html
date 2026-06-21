@@ -46,8 +46,10 @@
         background-size: 40px 40px;
         background-position: 0 0, 20px 20px;
       }
-      .cute-shadow {
-        box-shadow: 0 8px 0px 0px #d0e4cd;
+      @media (min-width: 640px) {
+        .cute-shadow {
+          box-shadow: 0 8px 0px 0px #d0e4cd;
+        }
       }
       .cute-shadow-btn {
         box-shadow: 0 4px 0px 0px #b8dcb4;
@@ -125,13 +127,13 @@
         </div>
         
         <!-- Interactive Viewport Container -->
-        <div class="bg-white border-4 border-pastel-border rounded-3xl overflow-hidden cute-shadow flex flex-col">
+        <div class="bg-white border-y-4 sm:border-4 border-pastel-border rounded-none sm:rounded-3xl -mx-4 sm:mx-0 overflow-hidden cute-shadow flex flex-col transition-all duration-300">
           
           <!-- Hidden Video tag for webcam pipeline stream -->
           <video id="video" autoplay muted playsinline class="hidden"></video>
           
           <!-- Viewport Box -->
-          <div class="w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border h-[280px] xs:h-[340px] sm:h-[400px] md:h-auto md:aspect-video transition-all duration-300">
+          <div class="w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border h-[340px] xs:h-[400px] sm:h-[460px] md:h-auto md:aspect-video transition-all duration-300">
             
             <!-- Visible Display Canvas -->
             <canvas id="overlay" class="w-full h-full object-contain transition-all duration-300"></canvas>
