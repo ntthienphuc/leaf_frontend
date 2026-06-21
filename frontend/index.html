@@ -1,26 +1,36 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LeafSense AI - Real-Time Dashboard</title>
+    <title>LeafyCare AI - Leaf Diagnostics</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
-        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
               sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+              display: ['"Fredoka"', 'sans-serif'],
             },
             colors: {
-              zinc: {
-                950: '#09090b',
+              pastel: {
+                bg: '#f7fcf6',
+                card: '#ffffff',
+                border: '#e2efe1',
+                green: '#7bc676',
+                greenLight: '#ebf7ea',
+                greenDark: '#2c5e29',
+                pink: '#fca5a5',
+                pinkLight: '#fff1f2',
+                pinkDark: '#9f1239',
+                cream: '#fdfbf7',
+                accent: '#ffa07a'
               }
             }
           }
@@ -30,55 +40,66 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-      /* Smooth transitions and scrollbars */
+      body {
+        background-color: var(--tw-pastel-bg);
+        background-image: radial-gradient(#e8eedf 1.5px, transparent 1.5px), radial-gradient(#e8eedf 1.5px, #f4faf2 1.5px);
+        background-size: 40px 40px;
+        background-position: 0 0, 20px 20px;
+      }
+      .cute-shadow {
+        box-shadow: 0 8px 0px 0px #d0e4cd;
+      }
+      .cute-shadow-btn {
+        box-shadow: 0 4px 0px 0px #b8dcb4;
+      }
+      .cute-shadow-btn-pink {
+        box-shadow: 0 4px 0px 0px #fca5a5;
+      }
+      .cute-shadow-btn:active {
+        transform: translateY(4px);
+        box-shadow: 0 0px 0px 0px transparent;
+      }
+      /* Custom Scrollbars */
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
       }
       .custom-scrollbar::-webkit-scrollbar-track {
-        background: rgba(24, 24, 27, 0.5);
-        border-radius: 4px;
+        background: rgba(235, 247, 234, 0.5);
+        border-radius: 8px;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(63, 63, 70, 0.8);
-        border-radius: 4px;
+        background: #b8dcb4;
+        border-radius: 8px;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(82, 82, 91, 0.8);
-      }
-      /* Loading glow animation */
-      @keyframes pulse-glow {
-        0%, 100% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.4)); }
-        50% { opacity: 1; filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.8)); }
-      }
-      .status-pulse-connected {
-        animation: pulse-glow 2s infinite;
+        background: #7bc676;
       }
     </style>
   </head>
-  <body class="bg-zinc-950 text-zinc-100 font-sans min-h-screen flex flex-col antialiased selection:bg-emerald-500/30 selection:text-emerald-400">
+  <body class="bg-pastel-bg text-zinc-800 font-sans min-h-screen flex flex-col antialiased selection:bg-green-200 selection:text-green-800">
     
     <!-- Top Header -->
-    <header class="border-b border-zinc-800/80 bg-zinc-900/50 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+    <header class="border-b-4 border-pastel-border bg-white sticky top-0 z-40 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
       <div class="flex items-center gap-3">
-        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-900/30">
-          <i data-lucide="leaf" class="text-zinc-950 w-5 h-5 stroke-[2.5]"></i>
+        <div class="h-11 w-11 rounded-2xl bg-gradient-to-tr from-green-400 to-emerald-300 flex items-center justify-center shadow-md border-2 border-green-500/20">
+          <i data-lucide="leaf" class="text-white w-6 h-6 fill-current"></i>
         </div>
         <div>
-          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-            LeafSense <span class="bg-emerald-500/10 text-emerald-400 text-xs px-2 py-0.5 rounded-full border border-emerald-500/20 font-medium">AI Realtime</span>
+          <h1 class="text-xl font-bold tracking-tight text-pastel-greenDark font-display flex items-center gap-2">
+            LeafyCare <span class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full border border-green-300/40 font-semibold font-sans">AI Diagnostics 🍃</span>
           </h1>
-          <p class="text-xs text-zinc-400">YOLO26 Leaf Tracker & EfficientNetV2 Classifier</p>
+          <p class="text-[11px] text-zinc-500 font-medium">YOLO26 Leaf Tracker & Classifier Dashboard</p>
         </div>
       </div>
       
       <!-- Right Header Actions / Status -->
       <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/60 border border-zinc-700/50 text-xs">
-          <span class="text-zinc-400">Backend Device:</span>
-          <span id="backend-device" class="font-semibold text-emerald-400 uppercase">unknown</span>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-pastel-greenLight border-2 border-pastel-border text-xs font-semibold text-pastel-greenDark">
+          <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+          <span>Device: <span id="backend-device" class="font-bold uppercase">unknown</span></span>
         </div>
-        <div id="status-badge" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-800/80 border border-zinc-700/80 text-xs font-semibold text-zinc-300">
-          <span class="h-2 w-2 rounded-full bg-zinc-500" id="status-dot"></span>
+        <div id="status-badge" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-100 border-2 border-zinc-200 text-xs font-bold text-zinc-600 transition-all duration-300">
+          <span class="h-2.5 w-2.5 rounded-full bg-zinc-400 animate-pulse" id="status-dot"></span>
           <span id="status-text">Disconnected</span>
         </div>
       </div>
@@ -87,163 +108,217 @@
     <!-- Main Content Grid -->
     <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-7xl mx-auto w-full">
       
-      <!-- Left Panel: Webcam Stream and Video Controls (7 cols) -->
-      <div class="lg:col-span-7 flex flex-col gap-5">
+      <!-- Left Panel (7 cols): Mode Toggles, Video/Preview Viewport, Settings -->
+      <div class="lg:col-span-7 flex flex-col gap-6">
         
-        <!-- Video Canvas Section -->
-        <div class="relative bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl group">
-          <!-- Video Source (invisible but active) -->
+        <!-- Mode Switcher Pills -->
+        <div class="bg-white border-4 border-pastel-border rounded-3xl p-2.5 flex gap-2">
+          <button id="btn-mode-realtime" class="flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-transparent bg-pastel-green text-white shadow-sm" onclick="switchMode('realtime')">
+            <i data-lucide="video" class="w-4 h-4"></i> Live Camera
+          </button>
+          <button id="btn-mode-snapshot" class="flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-pastel-border bg-white text-zinc-600 hover:bg-zinc-50" onclick="switchMode('snapshot')">
+            <i data-lucide="camera" class="w-4 h-4"></i> Take Photo
+          </button>
+          <button id="btn-mode-upload" class="flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-pastel-border bg-white text-zinc-600 hover:bg-zinc-50" onclick="switchMode('upload')">
+            <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload Image
+          </button>
+        </div>
+        
+        <!-- Interactive Viewport Container -->
+        <div class="bg-white border-4 border-pastel-border rounded-3xl overflow-hidden cute-shadow flex flex-col">
+          
+          <!-- Hidden Video tag for webcam pipeline stream -->
           <video id="video" autoplay muted playsinline class="hidden"></video>
           
-          <!-- Viewport (responsive display aspect-ratio matched dynamically) -->
-          <div class="aspect-video w-full relative bg-black flex items-center justify-center">
-            <!-- Overlay Canvas for rendering video frame + detections -->
-            <canvas id="overlay" class="w-full h-full max-h-[500px] object-contain"></canvas>
+          <!-- Viewport Box -->
+          <div class="aspect-video w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border">
             
-            <!-- Floating HUD (Stats overlay) -->
-            <div class="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
-              <div class="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-zinc-300 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span>Latency (RTT): <span id="stat-latency" class="font-bold text-white">-</span> ms</span>
+            <!-- Visible Display Canvas -->
+            <canvas id="overlay" class="w-full h-full max-h-[460px] object-contain"></canvas>
+            
+            <!-- Drag & Drop Upload Overlay -->
+            <div id="upload-container" class="absolute inset-0 bg-pastel-cream/90 flex flex-col items-center justify-center p-6 text-center border-4 border-dashed border-pastel-green/40 m-4 rounded-2xl transition cursor-pointer hidden hover:bg-pastel-greenLight/20">
+              <input type="file" id="file-input" class="hidden" accept="image/jpeg,image/png" />
+              <div class="w-16 h-16 rounded-full bg-pastel-greenLight border-2 border-pastel-green/30 flex items-center justify-center mb-4">
+                <i data-lucide="image" class="w-8 h-8 text-pastel-green"></i>
               </div>
-              <div class="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-zinc-300 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-                <span>Render FPS: <span id="stat-fps" class="font-bold text-white">0.0</span></span>
+              <h3 class="text-base font-bold text-pastel-greenDark font-display">Upload Leaf Photo</h3>
+              <p class="text-xs text-zinc-500 mt-1.5 max-w-sm">Drag and drop your leaf image here, or click to choose a file from your device</p>
+              <button id="btn-browse-file" class="mt-4 px-4 py-2 bg-white border-2 border-pastel-green text-pastel-greenDark rounded-xl font-bold text-xs hover:bg-pastel-greenLight transition active:scale-95">
+                Browse Files 📁
+              </button>
+            </div>
+            
+            <!-- Real-time HUD stats (floating bubble) -->
+            <div id="floating-hud" class="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none transition-all duration-300">
+              <div class="px-3 py-1 rounded-xl bg-white/90 backdrop-blur-sm border-2 border-pastel-border text-[10px] font-bold text-zinc-600 flex items-center gap-1.5 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-pastel-green"></span>
+                <span>Latency: <span id="stat-latency" class="font-mono text-pastel-greenDark">-</span> ms</span>
               </div>
-              <div class="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-zinc-300 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                <span>Stream Res: <span id="stat-resolution" class="font-bold text-white">0x0</span></span>
+              <div class="px-3 py-1 rounded-xl bg-white/90 backdrop-blur-sm border-2 border-pastel-border text-[10px] font-bold text-zinc-600 flex items-center gap-1.5 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span>FPS: <span id="stat-fps" class="font-mono text-cyan-600">0.0</span></span>
+              </div>
+              <div class="px-3 py-1 rounded-xl bg-white/90 backdrop-blur-sm border-2 border-pastel-border text-[10px] font-bold text-zinc-600 flex items-center gap-1.5 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span>Size: <span id="stat-resolution" class="font-mono text-amber-700">0x0</span></span>
               </div>
             </div>
 
-            <!-- Start Stream Watermark Overlay -->
-            <div id="start-overlay" class="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 transition-all duration-300">
-              <div class="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
-                <i data-lucide="video" class="w-8 h-8 text-emerald-400"></i>
+            <!-- Start Session Screen (Watermark) -->
+            <div id="start-overlay" class="absolute inset-0 bg-white/95 flex flex-col items-center justify-center text-center p-6 transition-all duration-300 z-10">
+              <div class="w-16 h-16 rounded-full bg-pastel-greenLight border-2 border-pastel-green/20 flex items-center justify-center mb-4">
+                <i data-lucide="video" class="w-8 h-8 text-pastel-green"></i>
               </div>
-              <h3 class="text-lg font-bold text-white">Camera Stream Offline</h3>
-              <p class="text-sm text-zinc-400 mt-1 max-w-sm">Connect to the WebSocket backend, configure your video input source, and click Start Camera to run leaf diagnostics.</p>
-              <button id="btn-start-overlay" class="mt-6 px-5 py-2.5 bg-emerald-500 text-zinc-950 rounded-xl font-bold hover:bg-emerald-400 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20">
-                <i data-lucide="play" class="w-4 h-4 fill-current"></i> Start Session
+              <h3 class="text-lg font-bold text-pastel-greenDark font-display">Webcam is Offline</h3>
+              <p class="text-xs text-zinc-500 mt-1 max-w-sm">To start diagnostic scanning, click the "Start Camera" button below to grant permission and initiate your scanner.</p>
+              <button id="btn-start-overlay" class="mt-6 px-6 py-3 bg-pastel-green text-white rounded-2xl font-bold hover:bg-green-500 active:scale-95 transition-all flex items-center gap-2 border-2 border-green-600/10 shadow-sm cute-shadow-btn">
+                <i data-lucide="play" class="w-4 h-4 fill-current"></i> Start Camera Stream
               </button>
             </div>
+
+            <!-- Loading overlay during static predictions -->
+            <div id="loading-overlay" class="absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center hidden">
+              <div class="w-12 h-12 border-4 border-pastel-green border-t-transparent rounded-full animate-spin mb-3"></div>
+              <span class="text-xs font-bold text-pastel-greenDark">Analyzing Leaf Health... 🔎</span>
+            </div>
+
           </div>
           
-          <!-- Bottom Quick Controls -->
-          <div class="px-5 py-3.5 border-t border-zinc-800/80 bg-zinc-900/60 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-2">
-              <button id="btn-stream-toggle" class="p-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-700 transition active:scale-95 flex items-center justify-center" title="Start/Stop stream">
+          <!-- Bottom Controls Area -->
+          <div class="px-5 py-4 bg-pastel-cream/50 flex flex-wrap items-center justify-between gap-4">
+            <!-- Mode 1: Live Controls -->
+            <div id="controls-realtime" class="flex items-center gap-3">
+              <button id="btn-stream-toggle" class="p-3 rounded-xl bg-pastel-green border-2 border-green-600/10 text-white font-bold transition active:scale-95 flex items-center justify-center cute-shadow-btn" title="Play/Pause camera stream">
                 <i data-lucide="play" class="w-5 h-5 fill-current" id="icon-stream-play"></i>
                 <i data-lucide="square" class="w-5 h-5 fill-current hidden" id="icon-stream-stop"></i>
               </button>
-              <button id="btn-reset-tracker" class="px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-300 hover:text-white font-medium text-xs transition active:scale-95 flex items-center gap-1.5">
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Reset Tracker
+              <button id="btn-reset-tracker" class="px-4 py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-xs transition active:scale-95 flex items-center gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Clear Tracker
               </button>
             </div>
             
-            <div class="flex items-center gap-2">
-              <button id="btn-snapshot" class="px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-300 hover:text-white font-medium text-xs transition active:scale-95 flex items-center gap-1.5">
-                <i data-lucide="camera" class="w-3.5 h-3.5"></i> Capture Frame
+            <!-- Mode 2: Snapshot Controls -->
+            <div id="controls-snapshot" class="hidden flex items-center gap-3">
+              <button id="btn-capture-action" class="px-5 py-2.5 rounded-xl bg-pastel-green border-2 border-green-600/10 text-white font-bold text-xs transition active:scale-95 flex items-center gap-1.5 cute-shadow-btn">
+                <i data-lucide="camera" class="w-4 h-4 fill-current"></i> Capture & Analyze
+              </button>
+              <button id="btn-retake-action" class="px-5 py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-xs transition active:scale-95 flex items-center gap-1.5 hidden">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Retake Photo
+              </button>
+            </div>
+
+            <!-- Mode 3: Upload Controls -->
+            <div id="controls-upload" class="hidden flex items-center gap-3">
+              <button id="btn-clear-upload" class="px-5 py-2.5 rounded-xl bg-rose-100 border-2 border-rose-200 text-rose-700 font-bold text-xs transition active:scale-95 flex items-center gap-1.5 hidden">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Clear Image
+              </button>
+            </div>
+            
+            <!-- Global Frame Download -->
+            <div>
+              <button id="btn-snapshot" class="px-4 py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-xs transition active:scale-95 flex items-center gap-1.5" title="Download snapshot">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Image
               </button>
             </div>
           </div>
         </div>
 
-        <!-- System Controls Card (Config settings) -->
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-4">
-          <h3 class="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
-            <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i> Session Settings
+        <!-- Session settings card -->
+        <div class="bg-white border-4 border-pastel-border rounded-3xl p-5 flex flex-col gap-4">
+          <h3 class="text-xs font-bold text-pastel-greenDark tracking-wider uppercase flex items-center gap-2 font-display">
+            <i data-lucide="settings" class="w-4 h-4 text-pastel-green"></i> Scanner Settings
           </h3>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- API Endpoint URL -->
+            <!-- API Connection URL -->
             <div class="flex flex-col gap-1.5">
-              <label for="input-ws-url" class="text-xs text-zinc-400 font-semibold">WebSocket Connection URL</label>
-              <input type="text" id="input-ws-url" value="ws://localhost:8000/ws/detect" placeholder="ws://..." class="w-full text-sm bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-zinc-200 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 font-mono transition" />
+              <label for="input-ws-url" class="text-[11px] text-zinc-500 font-bold">API Connection URL</label>
+              <input type="text" id="input-ws-url" value="ws://localhost:8000/ws/detect" placeholder="ws://..." class="w-full text-xs bg-zinc-50 border-2 border-pastel-border rounded-xl px-3.5 py-2 text-zinc-700 outline-none focus:border-pastel-green/50 font-mono transition" />
             </div>
 
-            <!-- Video Device Dropdown -->
-            <div class="flex flex-col gap-1.5">
-              <label for="select-camera" class="text-xs text-zinc-400 font-semibold">Video Device Source</label>
-              <select id="select-camera" class="w-full text-sm bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-zinc-200 outline-none focus:border-emerald-500/50 transition cursor-pointer">
+            <!-- Camera Selection -->
+            <div class="flex flex-col gap-1.5" id="camera-selector-container">
+              <label for="select-camera" class="text-[11px] text-zinc-500 font-bold">Webcam Device Source</label>
+              <select id="select-camera" class="w-full text-xs bg-zinc-50 border-2 border-pastel-border rounded-xl px-3.5 py-2 text-zinc-700 outline-none focus:border-pastel-green/50 transition cursor-pointer">
                 <option value="">Fetching cameras...</option>
               </select>
             </div>
 
-            <!-- Target Resolution Limits -->
-            <div class="flex flex-col gap-1.5">
-              <label for="select-resolution" class="text-xs text-zinc-400 font-semibold">Webcam Resolution Target</label>
-              <select id="select-resolution" class="w-full text-sm bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-zinc-200 outline-none focus:border-emerald-500/50 transition cursor-pointer">
-                <option value="640">Standard Optimized (640px Max Side - Recommended)</option>
-                <option value="960">High Resolution (960px Max Side)</option>
-                <option value="480">Low Latency (480px Max Side)</option>
+            <!-- Frame size settings -->
+            <div class="flex flex-col gap-1.5" id="resolution-selector-container">
+              <label for="select-resolution" class="text-[11px] text-zinc-500 font-bold">Image Sizing Limits</label>
+              <select id="select-resolution" class="w-full text-xs bg-zinc-50 border-2 border-pastel-border rounded-xl px-3.5 py-2 text-zinc-700 outline-none focus:border-pastel-green/50 transition cursor-pointer">
+                <option value="640">Standard Optimized (640px - Recommended)</option>
+                <option value="960">High Definition (960px)</option>
+                <option value="480">Low Latency (480px)</option>
               </select>
             </div>
 
-            <!-- JPEG Frame Compression Quality -->
+            <!-- Compression setting -->
             <div class="flex flex-col gap-1.5">
               <div class="flex justify-between items-center">
-                <label for="slider-quality" class="text-xs text-zinc-400 font-semibold">JPEG Compression Quality</label>
-                <span id="label-quality" class="text-xs font-mono font-bold text-emerald-400">70%</span>
+                <label for="slider-quality" class="text-[11px] text-zinc-500 font-bold">JPEG Quality Compression</label>
+                <span id="label-quality" class="text-xs font-mono font-bold text-pastel-green">70%</span>
               </div>
-              <input type="range" id="slider-quality" min="10" max="100" value="70" class="accent-emerald-500 h-1.5 rounded-lg bg-zinc-950 cursor-pointer" />
+              <input type="range" id="slider-quality" min="10" max="100" value="70" class="accent-pastel-green h-1.5 rounded-lg bg-zinc-100 cursor-pointer" />
             </div>
           </div>
         </div>
 
       </div>
 
-      <!-- Right Panel: Diagnostics and Crop Analytics (5 cols) -->
+      <!-- Right Panel (5 cols): Diagnostic cards and crop histories -->
       <div class="lg:col-span-5 flex flex-col gap-6">
 
-        <!-- Connection and Stats Summary -->
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-          <h3 class="text-sm font-bold text-white tracking-wide uppercase mb-4 flex items-center gap-2">
-            <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i> Stream Diagnostics
+        <!-- Performance Summary Card -->
+        <div class="bg-white border-4 border-pastel-border rounded-3xl p-5">
+          <h3 class="text-xs font-bold text-pastel-greenDark tracking-wider uppercase mb-4 flex items-center gap-2 font-display">
+            <i data-lucide="pulse" class="w-4 h-4 text-pastel-green"></i> Scan Metrics
           </h3>
           <div class="grid grid-cols-2 gap-4">
-            <div class="bg-zinc-950 border border-zinc-800/80 rounded-xl p-3.5 flex flex-col">
-              <span class="text-[10px] text-zinc-400 font-medium uppercase">Network RTT</span>
-              <span id="card-latency" class="text-xl font-bold font-mono text-zinc-100 mt-1">- <span class="text-xs text-zinc-500">ms</span></span>
-              <p class="text-[10px] text-zinc-500 mt-1">WebSocket roundtrip time</p>
+            <div class="bg-pastel-cream border-2 border-pastel-border rounded-2xl p-3.5 flex flex-col shadow-sm">
+              <span class="text-[9px] text-zinc-400 font-bold uppercase">RTT Latency</span>
+              <span id="card-latency" class="text-lg font-bold font-mono text-pastel-greenDark mt-1">- <span class="text-xs text-zinc-400">ms</span></span>
+              <p class="text-[9px] text-zinc-500 mt-1">Network roundtrip</p>
             </div>
             
-            <div class="bg-zinc-950 border border-zinc-800/80 rounded-xl p-3.5 flex flex-col">
-              <span class="text-[10px] text-zinc-400 font-medium uppercase">Inference FPS</span>
-              <span id="card-fps" class="text-xl font-bold font-mono text-zinc-100 mt-1">0.0</span>
-              <p class="text-[10px] text-zinc-500 mt-1">Throughput frames/sec</p>
+            <div class="bg-pastel-cream border-2 border-pastel-border rounded-2xl p-3.5 flex flex-col shadow-sm">
+              <span class="text-[9px] text-zinc-400 font-bold uppercase">Pipeline FPS</span>
+              <span id="card-fps" class="text-lg font-bold font-mono text-pastel-greenDark mt-1">0.0</span>
+              <p class="text-[9px] text-zinc-500 mt-1">Process frequency</p>
             </div>
 
-            <div class="bg-zinc-950 border border-zinc-800/80 rounded-xl p-3.5 flex flex-col">
-              <span class="text-[10px] text-zinc-400 font-medium uppercase">Payload size</span>
-              <span id="card-payload" class="text-xl font-bold font-mono text-zinc-100 mt-1">0.0 <span class="text-xs text-zinc-500">KB</span></span>
-              <p class="text-[10px] text-zinc-500 mt-1">Average image weight</p>
+            <div class="bg-pastel-cream border-2 border-pastel-border rounded-2xl p-3.5 flex flex-col shadow-sm">
+              <span class="text-[9px] text-zinc-400 font-bold uppercase">Image Payload</span>
+              <span id="card-payload" class="text-lg font-bold font-mono text-pastel-greenDark mt-1">0.0 <span class="text-xs text-zinc-400">KB</span></span>
+              <p class="text-[9px] text-zinc-500 mt-1">Compressed file weight</p>
             </div>
 
-            <div class="bg-zinc-950 border border-zinc-800/80 rounded-xl p-3.5 flex flex-col">
-              <span class="text-[10px] text-zinc-400 font-medium uppercase">Active Targets</span>
-              <span id="card-targets" class="text-xl font-bold font-mono text-zinc-100 mt-1">0</span>
-              <p class="text-[10px] text-zinc-500 mt-1">Tracked leaves in frame</p>
+            <div class="bg-pastel-cream border-2 border-pastel-border rounded-2xl p-3.5 flex flex-col shadow-sm">
+              <span class="text-[9px] text-zinc-400 font-bold uppercase">Target Count</span>
+              <span id="card-targets" class="text-lg font-bold font-mono text-pastel-greenDark mt-1">0</span>
+              <p class="text-[9px] text-zinc-500 mt-1">Leaves scanned</p>
             </div>
           </div>
         </div>
 
-        <!-- Live Tracker Cards -->
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl flex-1 flex flex-col min-h-[350px] overflow-hidden">
-          <div class="px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-900/60">
-            <h3 class="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
-              <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i> Tracked Targets
+        <!-- Live Leaf Crops list container -->
+        <div class="bg-white border-4 border-pastel-border rounded-3xl flex-1 flex flex-col min-h-[350px] overflow-hidden cute-shadow">
+          <div class="px-5 py-4 border-b-2 border-pastel-border flex items-center justify-between bg-pastel-greenLight/30">
+            <h3 class="text-xs font-bold text-pastel-greenDark tracking-wider uppercase flex items-center gap-2 font-display">
+              <i data-lucide="target" class="w-4 h-4 text-pastel-green"></i> Diagnostic Reports
             </h3>
-            <span class="bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded text-[10px] font-mono border border-zinc-700/50" id="tracked-counter">0 Total</span>
+            <span class="bg-pastel-green text-white px-2.5 py-0.5 rounded-full text-[9px] font-bold" id="tracked-counter">0 Active</span>
           </div>
 
-          <!-- Dynamic Target list -->
-          <div id="target-list" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3.5 custom-scrollbar bg-zinc-950/20">
-            <!-- Empty state -->
-            <div id="target-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-500">
-              <i data-lucide="view" class="w-10 h-10 mb-3 stroke-[1.5] text-zinc-600"></i>
-              <p class="text-sm font-medium">No Tracked Leaves Detected</p>
-              <p class="text-xs text-zinc-500 max-w-[240px] mt-1">Ensure a leaf is visible in camera view to initialize tracker tracking.</p>
+          <!-- Card list -->
+          <div id="target-list" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar bg-pastel-cream/20">
+            <!-- Empty target placeholder -->
+            <div id="target-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-400">
+              <i data-lucide="view" class="w-12 h-12 mb-3 text-zinc-300 stroke-[1.5]"></i>
+              <p class="text-sm font-bold text-zinc-500 font-display">No Diagnostics Yet</p>
+              <p class="text-xs text-zinc-400 max-w-[200px] mt-1">Make sure a leaf is visible in scanning mode to trigger diagnosis report cards.</p>
             </div>
           </div>
         </div>
@@ -256,9 +331,9 @@
     <canvas id="hidden-capture" class="hidden"></canvas>
     
     <!-- Toast notifications -->
-    <div id="toast" class="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-100 text-sm shadow-xl flex items-center gap-2.5 translate-y-24 opacity-0 transition-all duration-300 pointer-events-none z-50">
-      <i data-lucide="info" class="w-4 h-4 text-emerald-400" id="toast-icon"></i>
-      <span id="toast-message">Notification</span>
+    <div id="toast" class="fixed bottom-6 right-6 px-4 py-3 rounded-2xl bg-white border-4 border-pastel-border text-zinc-800 text-sm shadow-xl flex items-center gap-2.5 translate-y-24 opacity-0 transition-all duration-300 pointer-events-none z-50">
+      <i data-lucide="info" class="w-5 h-5 text-pastel-green" id="toast-icon"></i>
+      <span id="toast-message" class="font-bold text-xs">Notification</span>
     </div>
 
     <!-- Frontend Script Logic -->
@@ -268,6 +343,9 @@
       const overlay = document.getElementById("overlay");
       const captureCanvas = document.getElementById("hidden-capture");
       const startOverlay = document.getElementById("start-overlay");
+      const uploadContainer = document.getElementById("upload-container");
+      const loadingOverlay = document.getElementById("loading-overlay");
+      const fileInput = document.getElementById("file-input");
       
       const btnStartOverlay = document.getElementById("btn-start-overlay");
       const btnStreamToggle = document.getElementById("btn-stream-toggle");
@@ -275,6 +353,11 @@
       const iconStreamStop = document.getElementById("icon-stream-stop");
       const btnResetTracker = document.getElementById("btn-reset-tracker");
       const btnSnapshot = document.getElementById("btn-snapshot");
+      
+      const btnCaptureAction = document.getElementById("btn-capture-action");
+      const btnRetakeAction = document.getElementById("btn-retake-action");
+      const btnClearUpload = document.getElementById("btn-clear-upload");
+      const btnBrowseFile = document.getElementById("btn-browse-file");
       
       const selectCamera = document.getElementById("select-camera");
       const selectResolution = document.getElementById("select-resolution");
@@ -300,16 +383,16 @@
       const targetEmptyState = document.getElementById("target-empty-state");
 
       // App State
+      let currentMode = 'realtime'; // 'realtime' | 'snapshot' | 'upload'
       let ws = null;
       let stream = null;
       let isStreaming = false;
       let isProcessingFrame = false;
-      let targetFrameRate = 15; // Cap frame transmission rate
+      let targetFrameRate = 15;
       
       // Performance Metrics
       let lastFrameSentTime = 0;
       let frameTimestamps = [];
-      let lastFpsCheckTime = 0;
       let payloadSizeSum = 0;
       let payloadSizeCount = 0;
       
@@ -317,10 +400,11 @@
       let frameImageObj = new Image();
       let lastCaptureBlob = null;
       let isDrawing = false;
+      let staticUploadedFile = null;
 
-      // Tracked Object Crops store (track_id -> { elementId, lastSeenTimestamp, base64Crop })
+      // Tracked Object Crops store (track_id -> { elementId, lastSeenTimestamp, cardElement })
       const trackedTargets = new Map();
-      const TRACK_EXPIRY_MS = 2500; // Expire cards after 2.5 seconds of not being seen
+      const TRACK_EXPIRY_MS = 2500; // Expire cards after 2.5 seconds in realtime mode
 
       // Load Saved Settings
       const savedWsUrl = localStorage.getItem("leafsense_ws_url");
@@ -333,61 +417,108 @@
       const savedRes = localStorage.getItem("leafsense_resolution");
       if (savedRes) selectResolution.value = savedRes;
 
-      // Fetch Vercel environment variables dynamically
-      fetch("/api/config")
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.WS_URL) {
-            // If localStorage is empty, or the user hasn't overridden it, use Vercel env variable
-            if (!savedWsUrl) {
-              inputWsUrl.value = data.WS_URL;
-            }
-            console.log("Vercel config loaded, WS_URL:", data.WS_URL);
-          }
-        })
-        .catch(err => console.log("Failed to fetch Vercel config, using default:", err));
-
       // Initialize Lucide Icons
       lucide.createIcons();
 
-      // Show toast message
+      // Mode Selection Router
+      function switchMode(mode) {
+        if (mode === currentMode) return;
+        currentMode = mode;
+        showToast(`Switched to ${formatLabel(mode)} mode`);
+
+        // Update button active state colors
+        ['realtime', 'snapshot', 'upload'].forEach(m => {
+          const btn = document.getElementById(`btn-mode-${m}`);
+          btn.className = "flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-pastel-border bg-white text-zinc-600 hover:bg-zinc-50";
+        });
+        const activeBtn = document.getElementById(`btn-mode-${mode}`);
+        activeBtn.className = "flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-transparent bg-pastel-green text-white shadow-sm";
+
+        // Toggle Control panels
+        document.getElementById("controls-realtime").className = mode === 'realtime' ? 'flex items-center gap-3' : 'hidden';
+        document.getElementById("controls-snapshot").className = mode === 'snapshot' ? 'flex items-center gap-3' : 'hidden';
+        document.getElementById("controls-upload").className = mode === 'upload' ? 'flex items-center gap-3' : 'hidden';
+
+        // Toggle Settings containers visibility
+        document.getElementById("camera-selector-container").className = mode !== 'upload' ? 'flex flex-col gap-1.5' : 'hidden';
+        document.getElementById("resolution-selector-container").className = mode !== 'upload' ? 'flex flex-col gap-1.5' : 'hidden';
+        document.getElementById("floating-hud").className = mode === 'realtime' ? 'absolute top-4 left-4 flex flex-col gap-2 pointer-events-none transition-all duration-300' : 'hidden';
+
+        // Initialize mode conditions
+        clearDetections();
+        
+        if (mode === 'realtime') {
+          uploadContainer.classList.add("hidden");
+          startOverlay.classList.remove("hidden");
+          btnRetakeAction.classList.add("hidden");
+          btnCaptureAction.classList.remove("hidden");
+          
+          if (isStreaming) {
+            startOverlay.classList.add("hidden");
+            connectWebSocket();
+          } else {
+            startCamera();
+          }
+        } else if (mode === 'snapshot') {
+          // Close WS if active, keep camera live without sending frames automatically
+          if (ws) ws.close();
+          uploadContainer.classList.add("hidden");
+          startOverlay.classList.remove("hidden");
+          btnRetakeAction.classList.add("hidden");
+          btnCaptureAction.classList.remove("hidden");
+
+          if (isStreaming) {
+            startOverlay.classList.add("hidden");
+            isDrawing = true;
+            requestAnimationFrame(renderLoop);
+          } else {
+            startCamera();
+          }
+        } else if (mode === 'upload') {
+          // Upload mode: close socket and release camera completely
+          if (ws) ws.close();
+          stopCamera();
+          
+          startOverlay.classList.add("hidden");
+          uploadContainer.classList.remove("hidden");
+          btnClearUpload.classList.add("hidden");
+        }
+      }
+
+      // Show toast notifications
       function showToast(message, type = "info") {
         const toast = document.getElementById("toast");
         const icon = document.getElementById("toast-icon");
         const msgSpan = document.getElementById("toast-message");
         
         msgSpan.textContent = message;
+        icon.className = "w-5 h-5";
         
-        // Reset classes
-        icon.className = "w-4 h-4";
         if (type === "success") {
-          icon.classList.add("text-emerald-400");
-          icon.setAttribute("data-lucide", "check-circle");
+          icon.classList.add("text-pastel-green");
+          icon.setAttribute("data-lucide", "check-circle-2");
         } else if (type === "error") {
           icon.classList.add("text-rose-500");
           icon.setAttribute("data-lucide", "alert-triangle");
         } else {
-          icon.classList.add("text-cyan-400");
+          icon.classList.add("text-cyan-500");
           icon.setAttribute("data-lucide", "info");
         }
         
         lucide.createIcons({ attrs: { class: icon.className } });
         
-        // Fade in
         toast.classList.remove("translate-y-24", "opacity-0");
         toast.classList.add("translate-y-0", "opacity-100");
         
-        // Auto hide after 3 seconds
         setTimeout(() => {
           toast.classList.add("translate-y-24", "opacity-0");
           toast.classList.remove("translate-y-0", "opacity-100");
         }, 3000);
       }
 
-      // Fetch list of connected cameras
+      // Populate connected webcams
       async function setupCameraSelection() {
         try {
-          // Trigger initial request to get permission and labels
           const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
           tempStream.getTracks().forEach(track => track.stop());
 
@@ -396,7 +527,7 @@
           
           selectCamera.innerHTML = "";
           if (videoDevices.length === 0) {
-            selectCamera.innerHTML = '<option value="">No cameras found</option>';
+            selectCamera.innerHTML = '<option value="">No camera detected</option>';
             return;
           }
 
@@ -407,21 +538,18 @@
             selectCamera.appendChild(option);
           });
 
-          // Check if there is a saved camera preference
           const savedCamera = localStorage.getItem("leafsense_camera_id");
           if (savedCamera && Array.from(selectCamera.options).some(o => o.value === savedCamera)) {
             selectCamera.value = savedCamera;
           }
         } catch (error) {
-          console.error("Camera enumeration error:", error);
-          selectCamera.innerHTML = '<option value="">Permission denied / Camera block</option>';
+          console.error("Camera access error:", error);
+          selectCamera.innerHTML = '<option value="">Camera blocked</option>';
         }
       }
 
-      // Setup list of cameras at load
       setupCameraSelection();
 
-      // Monitor camera selection change
       selectCamera.onchange = () => {
         localStorage.setItem("leafsense_camera_id", selectCamera.value);
         if (isStreaming) {
@@ -429,7 +557,6 @@
         }
       };
 
-      // Quality Slider Feedback
       sliderQuality.oninput = (e) => {
         labelQuality.textContent = `${e.target.value}%`;
       };
@@ -445,7 +572,7 @@
         }
       };
 
-      // Format class name into human readable
+      // Format label text to be cleaner
       function formatLabel(label) {
         if (!label) return "Unknown";
         return label
@@ -455,56 +582,56 @@
           .join(" ");
       }
 
-      // Set backend connection status styles
+      // Connection Status layout updates
       function updateConnectionStatus(status) {
-        statusDot.className = "h-2 w-2 rounded-full";
-        statusBadge.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-semibold";
+        statusDot.className = "h-2.5 w-2.5 rounded-full";
+        statusBadge.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 text-xs font-bold transition-all duration-300";
         
         switch (status) {
           case "connected":
-            statusDot.classList.add("bg-emerald-500", "status-pulse-connected");
-            statusBadge.classList.add("bg-emerald-500/10", "text-emerald-400", "border-emerald-500/20");
+            statusDot.classList.add("bg-pastel-green", "status-pulse-connected");
+            statusBadge.classList.add("bg-pastel-greenLight", "text-pastel-greenDark", "border-pastel-border");
             statusText.textContent = "Live Stream Connected";
             break;
           case "connecting":
-            statusDot.classList.add("bg-amber-500", "animate-pulse");
-            statusBadge.classList.add("bg-amber-500/10", "text-amber-400", "border-amber-500/20");
+            statusDot.classList.add("bg-amber-400", "animate-pulse");
+            statusBadge.classList.add("bg-amber-50/80", "text-amber-700", "border-amber-200");
             statusText.textContent = "Connecting...";
             break;
           case "disconnected":
           default:
-            statusDot.classList.add("bg-rose-500");
-            statusBadge.classList.add("bg-rose-500/10", "text-rose-400", "border-rose-500/20");
-            statusText.textContent = "Disconnected";
+            statusDot.classList.add("bg-rose-400");
+            statusBadge.classList.add("bg-rose-50", "text-rose-700", "border-rose-200");
+            statusText.textContent = "Offline";
             break;
         }
       }
 
-      // Fetch health metadata (like active models and classes) from backend
+      // Backend status checker
       async function fetchBackendMetadata() {
         const wsUrl = inputWsUrl.value;
         localStorage.setItem("leafsense_ws_url", wsUrl);
-
-        // Deduce REST API endpoint from WebSocket URL
-        const httpUrl = wsUrl
-          .replace(/^wss:\/\//i, "https://")
-          .replace(/^ws:\/\//i, "http://")
-          .split("/ws/")[0];
+        const httpUrl = getHttpUrl(wsUrl);
         
         try {
           const response = await fetch(`${httpUrl}/health`);
           if (response.ok) {
             const data = await response.json();
             backendDevice.textContent = data.device || "cpu";
-            showToast("Backend health OK - device resolved: " + (data.device || "cpu").toUpperCase(), "success");
           }
         } catch (err) {
-          console.warn("Could not fetch API health endpoint. Continuing connection...", err);
           backendDevice.textContent = "unknown";
         }
       }
 
-      // Establish WebSocket Connection
+      function getHttpUrl(wsUrl) {
+        return wsUrl
+          .replace(/^wss:\/\//i, "https://")
+          .replace(/^ws:\/\//i, "http://")
+          .split("/ws/")[0];
+      }
+
+      // Connect WebSocket
       function connectWebSocket() {
         if (ws) {
           ws.close();
@@ -518,11 +645,10 @@
 
         ws.onopen = () => {
           updateConnectionStatus("connected");
-          showToast("WebSocket connection established", "success");
+          showToast("Connected to backend stream", "success");
           fetchBackendMetadata();
           
-          // Trigger camera start if stream selected
-          if (isStreaming) {
+          if (isStreaming && currentMode === 'realtime') {
             sendNextFrame();
           }
         };
@@ -531,37 +657,31 @@
           isProcessingFrame = false;
           try {
             const result = JSON.parse(event.data);
-            
-            // Check if it's a reset message
             if (result.type === "reset") {
-              showToast("Tracker state cleared on backend", "success");
+              showToast("Tracker memory cleared", "success");
               return;
             }
-            
             processDetections(result);
           } catch (e) {
-            console.error("Error parsing websocket message data:", e);
+            console.error("Parse error:", e);
           }
         };
 
         ws.onclose = () => {
           updateConnectionStatus("disconnected");
           isProcessingFrame = false;
-          // Retry logic if stream remains active
-          if (isStreaming) {
-            showToast("Connection closed. Retrying connection...", "error");
+          if (isStreaming && currentMode === 'realtime') {
             setTimeout(connectWebSocket, 3000);
           }
         };
 
         ws.onerror = (err) => {
-          console.error("WebSocket Error:", err);
           updateConnectionStatus("disconnected");
-          showToast("WebSocket connection error", "error");
+          showToast("WebSocket connection failed", "error");
         };
       }
 
-      // Start video camera feed
+      // Play video device feed
       async function startCamera() {
         try {
           const deviceId = selectCamera.value;
@@ -573,7 +693,6 @@
           stream = await navigator.mediaDevices.getUserMedia(constraints);
           video.srcObject = stream;
           
-          // Play stream
           await new Promise((resolve) => {
             video.onloadedmetadata = () => {
               video.play();
@@ -584,28 +703,24 @@
           isStreaming = true;
           startOverlay.classList.add("hidden");
           
-          // Match icon layout
           iconStreamPlay.classList.add("hidden");
           iconStreamStop.classList.remove("hidden");
-          btnStreamToggle.classList.remove("bg-zinc-800");
-          btnStreamToggle.classList.add("bg-emerald-500", "text-zinc-950", "border-emerald-600");
+          btnStreamToggle.className = "p-3 rounded-xl bg-pastel-pink border-2 border-rose-300/30 text-white font-bold transition active:scale-95 flex items-center justify-center cute-shadow-btn-pink";
 
-          showToast("Camera stream successfully opened", "success");
-
-          // Start WebGL / 2D rendering loop
           isDrawing = true;
           requestAnimationFrame(renderLoop);
 
-          // Connect websocket if not already open
-          if (!ws || ws.readyState !== WebSocket.OPEN) {
-            connectWebSocket();
-          } else {
-            sendNextFrame();
+          if (currentMode === 'realtime') {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+              connectWebSocket();
+            } else {
+              sendNextFrame();
+            }
           }
 
         } catch (error) {
-          console.error("Error accessing camera:", error);
-          showToast("Unable to access camera device: " + error.message, "error");
+          console.error("Camera fail:", error);
+          showToast("Failed to open camera: " + error.message, "error");
           stopCamera();
         }
       }
@@ -621,18 +736,15 @@
         }
         video.srcObject = null;
         
-        // Hide stream UI
-        startOverlay.classList.remove("hidden");
+        if (currentMode !== 'upload') {
+          startOverlay.classList.remove("hidden");
+        }
         iconStreamPlay.classList.remove("hidden");
         iconStreamStop.classList.add("hidden");
-        btnStreamToggle.classList.add("bg-zinc-800");
-        btnStreamToggle.classList.remove("bg-emerald-500", "text-zinc-950", "border-emerald-600");
+        btnStreamToggle.className = "p-3 rounded-xl bg-pastel-green border-2 border-green-600/10 text-white font-bold transition active:scale-95 flex items-center justify-center cute-shadow-btn";
         
-        // Clear canvases
         const ctx = overlay.getContext("2d");
         ctx.clearRect(0, 0, overlay.width, overlay.height);
-
-        showToast("Session stopped");
       }
 
       async function restartCameraStream() {
@@ -643,11 +755,10 @@
         }
       }
 
-      // Main Render loop to draw webcam feed onto local screen overlay canvas
+      // Render Loop (Local drawing webcam frame)
       function renderLoop() {
         if (!isDrawing || video.paused || video.ended) return;
 
-        // Sync drawing overlay coordinates
         if (overlay.width !== video.videoWidth || overlay.height !== video.videoHeight) {
           overlay.width = video.videoWidth;
           overlay.height = video.videoHeight;
@@ -656,25 +767,25 @@
         const ctx = overlay.getContext("2d");
         ctx.drawImage(video, 0, 0, overlay.width, overlay.height);
         
-        // Redraw active box projections from tracker history on the canvas
+        // Render box overlays locally
         drawBoundingBoxes(ctx);
         
-        // Calculate rendering frame stats
-        const now = performance.now();
-        while (frameTimestamps.length > 0 && frameTimestamps[0] <= now - 1000) {
-          frameTimestamps.shift();
+        if (currentMode === 'realtime') {
+          const now = performance.now();
+          while (frameTimestamps.length > 0 && frameTimestamps[0] <= now - 1000) {
+            frameTimestamps.shift();
+          }
+          const fpsVal = frameTimestamps.length;
+          statFps.textContent = fpsVal.toFixed(1);
+          cardFps.textContent = fpsVal.toFixed(1);
         }
-        
-        const fpsVal = frameTimestamps.length;
-        statFps.textContent = fpsVal.toFixed(1);
-        cardFps.textContent = fpsVal.toFixed(1);
 
         requestAnimationFrame(renderLoop);
       }
 
-      // Capture frame and send to API via WebSocket
+      // Send Frame (Real-time mode)
       async function sendNextFrame() {
-        if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN || isProcessingFrame) return;
+        if (currentMode !== 'realtime' || !isStreaming || !ws || ws.readyState !== WebSocket.OPEN || isProcessingFrame) return;
 
         if (video.videoWidth === 0) {
           setTimeout(sendNextFrame, 100);
@@ -683,21 +794,17 @@
 
         isProcessingFrame = true;
         
-        // 1. Determine scaling matching user configuration choice
         const maxSide = parseInt(selectResolution.value) || 640;
         const scale = Math.min(1, maxSide / Math.max(video.videoWidth, video.videoHeight));
         captureCanvas.width = Math.round(video.videoWidth * scale);
         captureCanvas.height = Math.round(video.videoHeight * scale);
 
-        // Update resolution info
         statResolution.textContent = `${captureCanvas.width}x${captureCanvas.height}`;
 
         const ctx = captureCanvas.getContext("2d");
         ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
 
-        // 2. Compress image as JPEG blob
         const quality = parseFloat(sliderQuality.value) / 100;
-        
         lastFrameSentTime = performance.now();
         
         captureCanvas.toBlob(
@@ -707,16 +814,12 @@
               return;
             }
 
-            // Keep reference of frame blob locally for cropping operations later
             lastCaptureBlob = blob;
-            
-            // Record payload size stats
             const sizeKb = blob.size / 1024;
             payloadSizeSum += sizeKb;
             payloadSizeCount++;
             cardPayload.textContent = (payloadSizeSum / payloadSizeCount).toFixed(1);
 
-            // Send binary packet directly
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(blob);
             } else {
@@ -728,16 +831,14 @@
         );
       }
 
-      // Array to store current detections to draw over frames
       let currentDetections = [];
 
-      // Draw active boxes and classification text overlays
+      // Drawing Bounding Boxes (Used in all modes)
       function drawBoundingBoxes(ctx) {
         const w = overlay.width;
         const h = overlay.height;
 
         currentDetections.forEach(det => {
-          // Scale absolute coordinates bbox_xyxy based on ratio of video to original processing frame
           const originalFrame = det.originalFrameSize || { width: w, height: h };
           const scaleX = w / originalFrame.width;
           const scaleY = h / originalFrame.height;
@@ -748,43 +849,38 @@
           const x2 = x2_orig * scaleX;
           const y2 = y2_orig * scaleY;
 
-          // Determine health class and coloring matching
           const label = det.stable_disease?.label || det.disease?.label || "healthy";
           const isHealthy = label.toLowerCase().includes("healthy");
           
-          const primaryColor = isHealthy ? "#10b981" : "#f43f5e"; // Green vs Rose
-          const secondaryColor = isHealthy ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)";
+          const primaryColor = isHealthy ? "#7bc676" : "#fca5a5"; 
+          const strokeStyleColor = isHealthy ? "#4caf50" : "#ef4444";
+          const secondaryColor = isHealthy ? "rgba(123, 198, 118, 0.15)" : "rgba(252, 165, 165, 0.15)";
           
-          // Draw rect
-          ctx.strokeStyle = primaryColor;
-          ctx.lineWidth = 3.5;
+          ctx.strokeStyle = strokeStyleColor;
+          ctx.lineWidth = 4;
           ctx.lineJoin = "round";
           ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
           
-          // Draw soft filled translucent background
           ctx.fillStyle = secondaryColor;
           ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
 
-          // Draw tracking label anchor pill
           const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
-          const text = `[ID:${det.track_id ?? "-"}] ${formatLabel(label)} ${(conf * 100).toFixed(0)}%`;
+          const text = `${det.track_id !== null ? '[ID:' + det.track_id + '] ' : ''}${formatLabel(label)} ${(conf * 100).toFixed(0)}%`;
           
-          ctx.font = "bold 13px system-ui, -apple-system, sans-serif";
+          ctx.font = "bold 12px 'Plus Jakarta Sans', system-ui, sans-serif";
           const textWidth = ctx.measureText(text).width;
           
-          // Draw background bar
-          ctx.fillStyle = primaryColor;
+          ctx.fillStyle = strokeStyleColor;
           const barHeight = 22;
           const barY = y1 - barHeight >= 0 ? y1 - barHeight : y1;
-          ctx.fillRect(x1 - 1, barY, textWidth + 12, barHeight);
+          ctx.fillRect(x1 - 2, barY, textWidth + 14, barHeight);
           
-          // Draw text
-          ctx.fillStyle = "#09090b"; // Dark black text
-          ctx.fillText(text, x1 + 6, barY + 15);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillText(text, x1 + 5, barY + 15);
         });
       }
 
-      // Process detection results returned from backend websocket API
+      // Process WebSocket Detections
       function processDetections(result) {
         const now = performance.now();
         const rtt = Math.round(now - lastFrameSentTime);
@@ -792,22 +888,18 @@
         statLatency.textContent = rtt;
         cardLatency.textContent = rtt;
         
-        // Keep tracking timestamps for FPS render speed checks
         frameTimestamps.push(now);
 
         const detections = result.detections || [];
         cardTargets.textContent = detections.length;
-        trackedCounter.textContent = `${detections.length} Target${detections.length !== 1 ? 's' : ''}`;
+        trackedCounter.textContent = `${detections.length} Scanned`;
 
-        // Save original processing dimensions alongside detection arrays
         currentDetections = detections.map(det => ({
           ...det,
           originalFrameSize: result.frame
         }));
 
-        // Convert the blob/video frame source to a crop target
         if (detections.length > 0) {
-          // Preload latest frame from video context to crop later
           const tempCanvas = document.createElement("canvas");
           tempCanvas.width = video.videoWidth;
           tempCanvas.height = video.videoHeight;
@@ -821,8 +913,6 @@
           updateTrackedCardContainer([]);
         }
 
-        // Trigger loop to process next frame with locking
-        // Throttling logic matching targetFrameRate
         const elapsed = performance.now() - lastFrameSentTime;
         const targetDelay = 1000 / targetFrameRate;
         const remainingDelay = Math.max(0, targetDelay - elapsed);
@@ -833,14 +923,32 @@
         }, remainingDelay);
       }
 
-      // Generate localized crop dataURLs dynamically using the video dimensions
+      // Process REST Static Predictions (Modes 2 & 3)
+      function processStaticPredictions(result) {
+        loadingOverlay.classList.add("hidden");
+        
+        const detections = result.detections || [];
+        cardTargets.textContent = detections.length;
+        trackedCounter.textContent = `${detections.length} Scanned`;
+        cardLatency.textContent = "-";
+
+        currentDetections = detections.map(det => ({
+          ...det,
+          originalFrameSize: result.frame
+        }));
+
+        // Draw results once to update view
+        const ctx = overlay.getContext("2d");
+        ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
+        drawBoundingBoxes(ctx);
+
+        updateTrackedCardContainer(detections);
+      }
+
+      // Generate crop thumbnail
       function generateCropDataUrl(det) {
         try {
-          const originalFrame = det.originalFrameSize || { width: video.videoWidth, height: video.videoHeight };
-          
-          // Scaled bounding boxes
           const [x1, y1, x2, y2] = det.bbox_xyxy;
-          
           const boxWidth = x2 - x1;
           const boxHeight = y2 - y1;
           
@@ -851,27 +959,25 @@
           cropCanvas.height = boxHeight;
           
           const ctx = cropCanvas.getContext("2d");
-          // Draw specific segment cropped out of frameImageObj
           ctx.drawImage(
             frameImageObj,
-            x1, y1, boxWidth, boxHeight, // Source crop
-            0, 0, boxWidth, boxHeight     // Target layout
+            x1, y1, boxWidth, boxHeight, 
+            0, 0, boxWidth, boxHeight     
           );
           
           return cropCanvas.toDataURL("image/jpeg", 0.7);
         } catch (err) {
-          console.error("Failed to crop target frame segment:", err);
           return null;
         }
       }
 
-      // Update sidebar visual lists of tracked leaves with progress sliders
+      // Render diagnosis cards
       function updateTrackedCardContainer(detections) {
         const now = Date.now();
         const activeIdsThisFrame = new Set();
 
         detections.forEach(det => {
-          const trackId = det.track_id !== null ? det.track_id : `untracked-${Math.random().toString(36).substr(2, 4)}`;
+          const trackId = det.track_id !== null ? det.track_id : `leaf-${Math.random().toString(36).substr(2, 4)}`;
           activeIdsThisFrame.add(trackId);
 
           const labelInfo = det.stable_disease || det.disease || { label: "Unknown", confidence: 0 };
@@ -879,42 +985,37 @@
           const conf = labelInfo.confidence;
           const isHealthy = label.toLowerCase().includes("healthy");
 
-          // Generate crop segment thumbnail
           const cropUrl = generateCropDataUrl(det);
 
           if (!trackedTargets.has(trackId)) {
-            // 1. Create and append HTML card element
             const cardEl = document.createElement("div");
             cardEl.id = `target-card-${trackId}`;
-            cardEl.className = "bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex gap-3.5 transition-all duration-300 hover:border-zinc-700/60";
+            cardEl.className = "bg-white border-2 border-pastel-border rounded-2xl p-3 flex gap-3.5 transition-all duration-300 shadow-sm";
             
             cardEl.innerHTML = `
-              <!-- Thumbnail canvas/image -->
-              <div class="h-16 w-16 bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800 flex-shrink-0 flex items-center justify-center relative">
-                <img id="thumb-${trackId}" src="${cropUrl || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'></svg>'}" class="object-cover w-full h-full" alt="Leaf crop" />
-                <span class="absolute top-1 left-1 bg-black/80 px-1.5 py-0.5 rounded text-[8px] font-bold font-mono text-zinc-300">ID ${trackId}</span>
+              <div class="h-16 w-16 bg-pastel-greenLight rounded-xl overflow-hidden border-2 border-pastel-border flex-shrink-0 flex items-center justify-center relative">
+                <img id="thumb-${trackId}" src="${cropUrl || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'></svg>'}" class="object-cover w-full h-full" />
+                <span class="absolute top-1 left-1 bg-black/60 px-1.5 py-0.5 rounded-lg text-[8px] font-bold font-mono text-white">ID: ${trackId}</span>
               </div>
               
-              <!-- Target Diagnostics Info -->
               <div class="flex-1 min-w-0 flex flex-col justify-between">
                 <div>
                   <div class="flex justify-between items-start gap-1">
-                    <h4 class="font-bold text-xs text-white truncate text-ellipsis" id="label-${trackId}">${formatLabel(label)}</h4>
-                    <span id="badge-${trackId}" class="px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${isHealthy ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
+                    <h4 class="font-bold text-xs text-pastel-greenDark truncate font-display" id="label-${trackId}">${formatLabel(label)}</h4>
+                    <span id="badge-${trackId}" class="px-2 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap ${isHealthy ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-rose-100 text-rose-700 border border-rose-200'}">
                       ${isHealthy ? 'Healthy' : 'Diseased'}
                     </span>
                   </div>
-                  <p class="text-[10px] text-zinc-400 mt-0.5">Leaf Confidence: ${(det.leaf_confidence * 100).toFixed(0)}%</p>
+                  <p class="text-[9px] text-zinc-400 mt-0.5 font-medium">Detector Confidence: ${(det.leaf_confidence * 100).toFixed(0)}%</p>
                 </div>
                 
-                <!-- Confidence progress bar -->
-                <div class="mt-2.5">
-                  <div class="flex justify-between text-[9px] text-zinc-500 font-mono mb-1">
+                <div class="mt-2">
+                  <div class="flex justify-between text-[9px] text-zinc-500 font-bold mb-1">
                     <span>Diagnosis Confidence</span>
-                    <span class="font-bold text-zinc-300" id="conf-${trackId}">${(conf * 100).toFixed(0)}%</span>
+                    <span class="text-zinc-600" id="conf-${trackId}">${(conf * 100).toFixed(0)}%</span>
                   </div>
-                  <div class="w-full bg-zinc-950 rounded-full h-1.5 overflow-hidden">
-                    <div id="progress-${trackId}" class="h-full rounded-full transition-all duration-300 ${isHealthy ? 'bg-emerald-500' : 'bg-rose-500'}" style="width: ${conf * 100}%"></div>
+                  <div class="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
+                    <div id="progress-${trackId}" class="h-full rounded-full transition-all duration-300 ${isHealthy ? 'bg-pastel-green' : 'bg-rose-400'}" style="width: ${conf * 100}%"></div>
                   </div>
                 </div>
               </div>
@@ -927,7 +1028,6 @@
               cardElement: cardEl
             });
           } else {
-            // 2. Update existing card details
             const target = trackedTargets.get(trackId);
             target.lastSeen = now;
 
@@ -943,30 +1043,31 @@
             confEl.textContent = `${(conf * 100).toFixed(0)}%`;
             progressEl.style.width = `${conf * 100}%`;
 
-            // Update color code logic
             if (isHealthy) {
-              badgeEl.className = "px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+              badgeEl.className = "px-2 py-0.5 rounded-full text-[9px] font-bold bg-green-100 text-green-700 border border-green-200";
               badgeEl.textContent = "Healthy";
-              progressEl.className = "h-full rounded-full transition-all duration-300 bg-emerald-500";
+              progressEl.className = "h-full rounded-full transition-all duration-300 bg-pastel-green";
             } else {
-              badgeEl.className = "px-2 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+              badgeEl.className = "px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200";
               badgeEl.textContent = "Diseased";
-              progressEl.className = "h-full rounded-full transition-all duration-300 bg-rose-500";
+              progressEl.className = "h-full rounded-full transition-all duration-300 bg-rose-400";
             }
           }
         });
 
-        // 3. Expire/Remove cards that are no longer seen in frame
-        trackedTargets.forEach((target, trackId) => {
-          if (now - target.lastSeen > TRACK_EXPIRY_MS) {
-            target.cardElement.classList.add("opacity-0", "scale-95");
-            setTimeout(() => {
-              target.cardElement.remove();
-              trackedTargets.delete(trackId);
-              checkEmptyState();
-            }, 300);
-          }
-        });
+        // Expire targets in real-time mode only
+        if (currentMode === 'realtime') {
+          trackedTargets.forEach((target, trackId) => {
+            if (now - target.lastSeen > TRACK_EXPIRY_MS) {
+              target.cardElement.classList.add("opacity-0", "scale-95");
+              setTimeout(() => {
+                target.cardElement.remove();
+                trackedTargets.delete(trackId);
+                checkEmptyState();
+              }, 300);
+            }
+          });
+        }
 
         checkEmptyState();
       }
@@ -979,7 +1080,19 @@
         }
       }
 
-      // Handle stream toggles
+      function clearDetections() {
+        currentDetections = [];
+        trackedTargets.forEach((target) => target.cardElement.remove());
+        trackedTargets.clear();
+        cardTargets.textContent = "0";
+        trackedCounter.textContent = "0 Active";
+        checkEmptyState();
+
+        const ctx = overlay.getContext("2d");
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+      }
+
+      // Stream control play/pause
       btnStreamToggle.onclick = () => {
         if (isStreaming) {
           stopCamera();
@@ -992,51 +1105,211 @@
         startCamera();
       };
 
-      // Reset tracker state triggers
+      // Reset tracker state
       btnResetTracker.onclick = () => {
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: "reset" }));
         } else {
-          // Try REST reset endpoint
           const wsUrl = inputWsUrl.value;
-          const httpUrl = wsUrl
-            .replace(/^wss:\/\//i, "https://")
-            .replace(/^ws:\/\//i, "http://")
-            .split("/ws/")[0];
+          const httpUrl = getHttpUrl(wsUrl);
           
           fetch(`${httpUrl}/tracker/reset`, { method: "POST" })
             .then(res => {
-              if (res.ok) showToast("Tracker reset via REST successfully", "success");
+              if (res.ok) showToast("Tracker reset successfully", "success");
             })
-            .catch(err => {
-              showToast("Failed to reset tracker: check backend server", "error");
-            });
+            .catch(() => showToast("Failed to reset tracker: check API connection", "error"));
+        }
+        clearDetections();
+      };
+
+      // Mode 2: Capture Snapshot Action
+      btnCaptureAction.onclick = async () => {
+        if (!isStreaming || video.paused || video.videoWidth === 0) {
+          showToast("Camera stream is not active", "error");
+          return;
         }
 
-        // Clear local cards immediately
-        trackedTargets.forEach((target) => target.cardElement.remove());
-        trackedTargets.clear();
-        currentDetections = [];
-        checkEmptyState();
+        // Draw current frozen frame to overlay
+        isDrawing = false;
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        const ctx = overlay.getContext("2d");
+        ctx.drawImage(video, 0, 0, overlay.width, overlay.height);
+
+        // Keep static image frame for cropping
+        frameImageObj.src = overlay.toDataURL("image/jpeg", 0.95);
+        
+        loadingOverlay.classList.remove("hidden");
+        btnCaptureAction.classList.add("hidden");
+        btnRetakeAction.classList.remove("hidden");
+
+        // Convert the frozen overlay frame into a blob and POST to /predict/image
+        overlay.toBlob(
+          async (blob) => {
+            if (!blob) {
+              loadingOverlay.classList.add("hidden");
+              showToast("Failed to capture frame image", "error");
+              return;
+            }
+
+            const httpUrl = getHttpUrl(inputWsUrl.value);
+            const formData = new FormData();
+            formData.append("file", blob, "snapshot.jpg");
+
+            try {
+              const response = await fetch(`${httpUrl}/predict/image?tracker=false`, {
+                method: "POST",
+                body: formData
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                processStaticPredictions(data);
+                showToast("Snapshot analyzed successfully!", "success");
+              } else {
+                throw new Error("HTTP error " + response.status);
+              }
+            } catch (err) {
+              loadingOverlay.classList.add("hidden");
+              showToast("Inference failed: check backend API", "error");
+              console.error(err);
+            }
+          },
+          "image/jpeg",
+          0.85
+        );
+      };
+
+      // Mode 2: Retake snapshot action
+      btnRetakeAction.onclick = () => {
+        clearDetections();
+        btnCaptureAction.classList.remove("hidden");
+        btnRetakeAction.classList.add("hidden");
+        isDrawing = true;
+        requestAnimationFrame(renderLoop);
+      };
+
+      // Mode 3: Drag and Drop & Upload Action trigger
+      uploadContainer.onclick = () => fileInput.click();
+      btnBrowseFile.onclick = (e) => {
+        e.stopPropagation();
+        fileInput.click();
+      };
+
+      fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) handleUploadedFile(file);
+      };
+
+      // Handle file drops
+      uploadContainer.ondragover = (e) => {
+        e.preventDefault();
+        uploadContainer.classList.add("bg-pastel-greenLight/40");
+      };
+      
+      uploadContainer.ondragleave = () => {
+        uploadContainer.classList.remove("bg-pastel-greenLight/40");
+      };
+
+      uploadContainer.ondrop = (e) => {
+        e.preventDefault();
+        uploadContainer.classList.remove("bg-pastel-greenLight/40");
+        const file = e.dataTransfer.files[0];
+        if (file) handleUploadedFile(file);
+      };
+
+      // Upload and analyze file
+      async function handleUploadedFile(file) {
+        if (!file.type.match("image.*")) {
+          showToast("Unsupported file: please select a JPEG or PNG image", "error");
+          return;
+        }
+
+        clearDetections();
+        loadingOverlay.classList.remove("hidden");
+        
+        // Show local preview by loading it as Image object
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            overlay.width = img.width;
+            overlay.height = img.height;
+            const ctx = overlay.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            
+            // Expose image coordinates for sidebar crops
+            frameImageObj.src = img.src;
+            
+            // Trigger REST call to endpoint
+            uploadAndAnalyzeBlob(file);
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      async function uploadAndAnalyzeBlob(file) {
+        const httpUrl = getHttpUrl(inputWsUrl.value);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const response = await fetch(`${httpUrl}/predict/image?tracker=false`, {
+            method: "POST",
+            body: formData
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            processStaticPredictions(data);
+            
+            uploadContainer.classList.add("hidden");
+            btnClearUpload.classList.remove("hidden");
+            showToast("Uploaded leaf analyzed successfully!", "success");
+          } else {
+            throw new Error("HTTP prediction failed: status " + response.status);
+          }
+        } catch (err) {
+          loadingOverlay.classList.add("hidden");
+          showToast("Inference failed: check backend API connection", "error");
+          console.error(err);
+        }
+      }
+
+      // Mode 3: Clear Upload
+      btnClearUpload.onclick = () => {
+        clearDetections();
+        uploadContainer.classList.remove("hidden");
+        btnClearUpload.classList.add("hidden");
+        fileInput.value = "";
       };
 
       // Snap snapshot frame screenshot of overlay canvas
       btnSnapshot.onclick = () => {
-        if (!isStreaming) {
-          showToast("No active stream to capture", "error");
-          return;
-        }
-
         const link = document.createElement("a");
         link.download = `leafsense-analysis-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.jpg`;
-        link.href = overlay.toDataURL("image/jpeg", 0.9);
+        link.href = overlay.toDataURL("image/jpeg", 0.95);
         link.click();
         showToast("Snapshot successfully downloaded", "success");
       };
 
+      // Fetch Vercel environment variables dynamically
+      fetch("/api/config")
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.WS_URL) {
+            if (!savedWsUrl) {
+              inputWsUrl.value = data.WS_URL;
+            }
+            console.log("Vercel config loaded, WS_URL:", data.WS_URL);
+          }
+        })
+        .catch(err => console.log("Failed to fetch Vercel config, using default:", err));
+
       // Handle tab visibility changes to pause streaming when backgrounded
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden && isStreaming) {
+        if (document.hidden && isStreaming && currentMode === 'realtime') {
           stopCamera();
           showToast("Stream paused automatically while backgrounded");
         }

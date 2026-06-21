@@ -73,7 +73,11 @@ def read_root():
     index_path = os.path.join(os.path.dirname(__file__), "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    # Check in sibling frontend directory
+    # Check in child frontend directory (e.g. in Docker)
+    child_path = os.path.join(os.path.dirname(__file__), "frontend", "index.html")
+    if os.path.exists(child_path):
+        return FileResponse(child_path)
+    # Check in sibling frontend directory (local dev)
     sibling_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
     if os.path.exists(sibling_path):
         return FileResponse(sibling_path)
