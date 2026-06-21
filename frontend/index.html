@@ -76,6 +76,59 @@
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #7bc676;
       }
+      
+      /* Springy slide-in animation for diagnostic cards */
+      @keyframes slideIn {
+        0% {
+          opacity: 0;
+          transform: translateY(16px) scale(0.95);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      .animate-slide-in {
+        animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+
+      /* Pulsing ring for connected status dot */
+      @keyframes pulseRing {
+        0% {
+          box-shadow: 0 0 0 0 rgba(123, 198, 118, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 8px rgba(123, 198, 118, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(123, 198, 118, 0);
+        }
+      }
+      .status-pulse-connected {
+        animation: pulseRing 2s infinite;
+      }
+
+      /* Breathing border glow for active live scanner */
+      @keyframes scanningGlow {
+        0% {
+          border-color: #e2efe1;
+        }
+        50% {
+          border-color: #7bc676;
+        }
+        100% {
+          border-color: #e2efe1;
+        }
+      }
+      .scanning-live {
+        animation: scanningGlow 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        box-shadow: 0 0 20px rgba(123, 198, 118, 0.2);
+      }
+      @media (min-width: 640px) {
+        .scanning-live {
+          box-shadow: 0 0 25px rgba(123, 198, 118, 0.35), 0 8px 0px 0px #b8dcb4;
+        }
+      }
     </style>
   </head>
   <body class="bg-pastel-bg text-zinc-800 font-sans min-h-screen flex flex-col antialiased selection:bg-green-200 selection:text-green-800">
@@ -127,13 +180,13 @@
         </div>
         
         <!-- Interactive Viewport Container -->
-        <div class="bg-white border-y-4 sm:border-4 border-pastel-border rounded-none sm:rounded-3xl -mx-4 sm:mx-0 overflow-hidden cute-shadow flex flex-col transition-all duration-300">
+        <div id="viewport-container" class="bg-white border-y-4 sm:border-4 border-pastel-border rounded-none sm:rounded-3xl -mx-4 sm:mx-0 overflow-hidden cute-shadow flex flex-col transition-all duration-300">
           
           <!-- Hidden Video tag for webcam pipeline stream -->
           <video id="video" autoplay muted playsinline class="hidden"></video>
           
           <!-- Viewport Box -->
-          <div class="w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border h-[60vh] xs:h-[65vh] sm:h-[70vh] md:h-auto md:aspect-video transition-all duration-300">
+          <div id="viewport-box" class="w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border h-[60vh] xs:h-[65vh] sm:h-[70vh] md:h-auto md:aspect-video transition-all duration-300">
             
             <!-- Visible Display Canvas -->
             <canvas id="overlay" class="w-full h-full object-contain transition-all duration-300"></canvas>
@@ -154,9 +207,14 @@
               </div>
               <h3 class="text-base font-bold text-pastel-greenDark font-display">Upload Leaf Photo</h3>
               <p class="text-xs text-zinc-500 mt-1.5 max-w-sm">Drag and drop your leaf image here, or click to choose a file from your device</p>
-              <button id="btn-browse-file" class="mt-4 px-4 py-2 bg-white border-2 border-pastel-green text-pastel-greenDark rounded-xl font-bold text-xs hover:bg-pastel-greenLight transition active:scale-95">
-                Browse Files 📁
-              </button>
+              <div class="flex gap-3 mt-4">
+                <button id="btn-browse-file" class="px-4 py-2 bg-white border-2 border-pastel-green text-pastel-greenDark rounded-xl font-bold text-xs hover:bg-pastel-greenLight transition active:scale-95">
+                  Browse Files 📁
+                </button>
+                <button id="btn-demo-file" class="px-4 py-2 bg-pastel-greenLight border-2 border-pastel-green text-pastel-greenDark rounded-xl font-bold text-xs hover:bg-pastel-green hover:text-white transition active:scale-95 flex items-center gap-1">
+                  Try Demo Image 🍃
+                </button>
+              </div>
             </div>
             
             <!-- Real-time HUD stats (floating bubble) -->
@@ -368,6 +426,7 @@
       const btnRetakeAction = document.getElementById("btn-retake-action");
       const btnClearUpload = document.getElementById("btn-clear-upload");
       const btnBrowseFile = document.getElementById("btn-browse-file");
+      const btnDemoFile = document.getElementById("btn-demo-file");
       
       const selectCamera = document.getElementById("select-camera");
       const selectResolution = document.getElementById("select-resolution");
@@ -397,6 +456,8 @@
       const iconTheaterCollapse = document.getElementById("icon-theater-collapse");
       const leftPanel = document.getElementById("left-panel");
       const rightPanel = document.getElementById("right-panel");
+      const viewportContainer = document.getElementById("viewport-container");
+      const viewportBox = document.getElementById("viewport-box");
       let isTheaterMode = false;
 
       // App State
@@ -437,7 +498,11 @@
       if (savedWsUrl) {
         inputWsUrl.value = savedWsUrl;
       } else {
-        inputWsUrl.value = "wss://thienphuc12339-leaf.hf.space/ws/detect";
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          inputWsUrl.value = `ws://${window.location.host}/ws/detect`;
+        } else {
+          inputWsUrl.value = "wss://thienphuc12339-leaf.hf.space/ws/detect";
+        }
       }
       const savedQuality = localStorage.getItem("leafsense_quality");
       if (savedQuality) {
@@ -455,12 +520,24 @@
           leftPanel.className = "lg:col-span-12 flex flex-col gap-6 transition-all duration-300";
           iconTheaterExpand.classList.add("hidden");
           iconTheaterCollapse.classList.remove("hidden");
+          
+          if (viewportBox) {
+            viewportBox.classList.remove("h-[60vh]", "xs:h-[65vh]", "sm:h-[70vh]", "md:h-auto", "md:aspect-video");
+            viewportBox.classList.add("h-[82vh]", "md:h-[75vh]");
+          }
+          
           showToast("Focus mode enabled", "success");
         } else {
           rightPanel.classList.remove("hidden");
           leftPanel.className = "lg:col-span-8 flex flex-col gap-6 transition-all duration-300";
           iconTheaterExpand.classList.remove("hidden");
           iconTheaterCollapse.classList.add("hidden");
+          
+          if (viewportBox) {
+            viewportBox.classList.remove("h-[82vh]", "md:h-[75vh]");
+            viewportBox.classList.add("h-[60vh]", "xs:h-[65vh]", "sm:h-[70vh]", "md:h-auto", "md:aspect-video");
+          }
+          
           showToast("Focus mode disabled");
         }
         
@@ -482,13 +559,17 @@
         currentMode = mode;
         showToast(`Switched to ${formatLabel(mode)} mode`);
 
+        if (mode !== 'realtime' && viewportContainer) {
+          viewportContainer.classList.remove("scanning-live");
+        }
+
         // Update button active state colors
         ['realtime', 'snapshot', 'upload'].forEach(m => {
           const btn = document.getElementById(`btn-mode-${m}`);
-          btn.className = "flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-pastel-border bg-white text-zinc-600 hover:bg-zinc-50";
+          btn.className = "flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-display font-semibold text-[11px] sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2 border-2 border-pastel-border bg-white text-zinc-600 hover:bg-zinc-50 whitespace-nowrap";
         });
         const activeBtn = document.getElementById(`btn-mode-${mode}`);
-        activeBtn.className = "flex-1 py-3 px-4 rounded-2xl font-display font-semibold text-sm transition-all flex items-center justify-center gap-2 border-2 border-transparent bg-pastel-green text-white shadow-sm";
+        activeBtn.className = "flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-display font-semibold text-[11px] sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2 border-2 border-transparent bg-pastel-green text-white shadow-sm whitespace-nowrap";
 
         // Toggle Control panels
         document.getElementById("controls-realtime").className = mode === 'realtime' ? 'flex items-center gap-3' : 'hidden';
@@ -767,11 +848,14 @@
           requestAnimationFrame(renderLoop);
 
           if (currentMode === 'realtime') {
+            viewportContainer.classList.add("scanning-live");
             if (!ws || ws.readyState !== WebSocket.OPEN) {
               connectWebSocket();
             } else {
               sendNextFrame();
             }
+          } else {
+            viewportContainer.classList.remove("scanning-live");
           }
 
         } catch (error) {
@@ -785,6 +869,10 @@
       function stopCamera() {
         isStreaming = false;
         isDrawing = false;
+        
+        if (viewportContainer) {
+          viewportContainer.classList.remove("scanning-live");
+        }
         
         if (stream) {
           stream.getTracks().forEach(track => track.stop());
@@ -1083,7 +1171,7 @@
           if (!trackedTargets.has(trackId)) {
             const cardEl = document.createElement("div");
             cardEl.id = `target-card-${trackId}`;
-            cardEl.className = "bg-white border-2 border-pastel-border rounded-2xl p-3 flex gap-3.5 transition-all duration-300 shadow-sm";
+            cardEl.className = "bg-white border-2 border-pastel-border rounded-2xl p-3 flex gap-3.5 transition-all duration-300 shadow-sm animate-slide-in";
             
             cardEl.innerHTML = `
               <div class="h-16 w-16 bg-pastel-greenLight rounded-xl overflow-hidden border-2 border-pastel-border flex-shrink-0 flex items-center justify-center relative">
@@ -1287,6 +1375,25 @@
       btnBrowseFile.onclick = (e) => {
         e.stopPropagation();
         fileInput.click();
+      };
+      btnDemoFile.onclick = async (e) => {
+        e.stopPropagation();
+        clearDetections();
+        loadingOverlay.classList.remove("hidden");
+        
+        try {
+          const response = await fetch("demo_leaf.jpg");
+          if (!response.ok) {
+            throw new Error(`Demo image not found (HTTP ${response.status})`);
+          }
+          const blob = await response.blob();
+          const file = new File([blob], "demo_leaf.jpg", { type: "image/jpeg" });
+          handleUploadedFile(file);
+        } catch (err) {
+          loadingOverlay.classList.add("hidden");
+          showToast("Failed to load demo image: " + err.message, "error");
+          console.error(err);
+        }
       };
 
       fileInput.onchange = (e) => {

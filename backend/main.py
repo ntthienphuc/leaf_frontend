@@ -156,3 +156,13 @@ async def detect_websocket(websocket: WebSocket) -> None:
 
     except WebSocketDisconnect:
         return
+
+# Serve static frontend files (assets, demo_leaf.jpg) as fallback
+from fastapi.staticfiles import StaticFiles
+for path in [
+    os.path.join(os.path.dirname(__file__), "frontend"),
+    os.path.join(os.path.dirname(__file__), "..", "frontend")
+]:
+    if os.path.exists(path):
+        app.mount("/", StaticFiles(directory=path), name="frontend")
+        break
