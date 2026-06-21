@@ -242,7 +242,7 @@
             <!-- API Connection URL -->
             <div class="flex flex-col gap-1.5">
               <label for="input-ws-url" class="text-[11px] text-zinc-500 font-bold">API Connection URL</label>
-              <input type="text" id="input-ws-url" value="ws://localhost:8000/ws/detect" placeholder="ws://..." class="w-full text-xs bg-zinc-50 border-2 border-pastel-border rounded-xl px-3.5 py-2 text-zinc-700 outline-none focus:border-pastel-green/50 font-mono transition" />
+              <input type="text" id="input-ws-url" value="wss://thienphuc12339-leaf.hf.space/ws/detect" placeholder="ws://..." class="w-full text-xs bg-zinc-50 border-2 border-pastel-border rounded-xl px-3.5 py-2 text-zinc-700 outline-none focus:border-pastel-green/50 font-mono transition" />
             </div>
 
             <!-- Camera Selection -->
@@ -422,8 +422,21 @@
       const TRACK_EXPIRY_MS = 2500; // Expire cards after 2.5 seconds in realtime mode
 
       // Load Saved Settings
-      const savedWsUrl = localStorage.getItem("leafsense_ws_url");
-      if (savedWsUrl) inputWsUrl.value = savedWsUrl;
+      let savedWsUrl = localStorage.getItem("leafsense_ws_url");
+      
+      // Safety check: if running on production but configured to localhost, force reset to production HF Space
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        if (!savedWsUrl || savedWsUrl.includes("localhost") || savedWsUrl.includes("127.0.0.1")) {
+          savedWsUrl = "wss://thienphuc12339-leaf.hf.space/ws/detect";
+          localStorage.setItem("leafsense_ws_url", savedWsUrl);
+        }
+      }
+      
+      if (savedWsUrl) {
+        inputWsUrl.value = savedWsUrl;
+      } else {
+        inputWsUrl.value = "wss://thienphuc12339-leaf.hf.space/ws/detect";
+      }
       const savedQuality = localStorage.getItem("leafsense_quality");
       if (savedQuality) {
         sliderQuality.value = savedQuality;

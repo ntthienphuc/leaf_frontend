@@ -14,6 +14,6 @@ module.exports = (req, res) => {
   }
 
   res.status(200).json({
-    WS_URL: process.env.WS_URL || "ws://localhost:8000/ws/detect"
+    WS_URL: process.env.WS_URL || "wss://thienphuc12339-leaf.hf.space/ws/detect"
   });
 };
