@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Leaf Disease API Webcam Test</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #111;
+        color: #eee;
+      }
+      .wrap {
+        position: relative;
+        max-width: 960px;
+        margin: 24px auto;
+      }
+      video,
+      canvas {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      canvas {
+        position: absolute;
+        inset: 0;
+      }
+      .bar {
+        max-width: 960px;
+        margin: 12px auto;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      button {
+        padding: 8px 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <button id="start">Start</button>
+      <button id="stop">Stop</button>
+      <span id="status">idle</span>
+    </div>
+    <div class="wrap">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    <canvas id="capture" style="display: none"></canvas>
+
+    <script>
+      const video = document.getElementById("video");
+      const overlay = document.getElementById("overlay");
+      const capture = document.getElementById("capture");
+      const statusEl = document.getElementById("status");
+      let ws = null;
+      let timer = null;
+      let stream = null;
+      let lastResult = null;
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function draw(result) {
+        lastResult = result;
+        const ctx = overlay.getContext("2d");
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        ctx.lineWidth = 3;
+        ctx.font = "18px Arial";
+
+        for (const det of result.detections || []) {
+          const [x1, y1, x2, y2] = det.bbox_xyxy;
+          const label = det.stable_disease?.label || det.disease?.label || "leaf";
+          const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
+          const text = `${det.track_id ?? "-"} ${label} ${(conf * 100).toFixed(0)}%`;
+          ctx.strokeStyle = "#00ff88";
+          ctx.fillStyle = "#00ff88";
+          ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+          ctx.fillText(text, x1 + 4, Math.max(22, y1 - 8));
+        }
+      }
+
+      async function sendFrame() {
+        if (!ws || ws.readyState !== WebSocket.OPEN || video.videoWidth === 0) return;
+        const maxSide = 960;
+        const scale = Math.min(1, maxSide / Math.max(video.videoWidth, video.videoHeight));
+        capture.width = Math.round(video.videoWidth * scale);
+        capture.height = Math.round(video.videoHeight * scale);
+        capture.getContext("2d").drawImage(video, 0, 0, capture.width, capture.height);
+        capture.toBlob(
+          (blob) => {
+            if (blob && ws.readyState === WebSocket.OPEN) ws.send(blob);
+          },
+          "image/jpeg",
+          0.75
+        );
+      }
+
+      document.getElementById("start").onclick = async () => {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = stream;
+        ws = new WebSocket("ws://localhost:8000/ws/detect");
+        ws.binaryType = "arraybuffer";
+        ws.onopen = () => {
+          setStatus("connected");
+          timer = setInterval(sendFrame, 180);
+        };
+        ws.onmessage = (event) => draw(JSON.parse(event.data));
+        ws.onclose = () => setStatus("closed");
+        ws.onerror = () => setStatus("websocket error");
+      };
+
+      document.getElementById("stop").onclick = () => {
+        if (timer) clearInterval(timer);
+        if (ws) ws.close();
+        if (stream) stream.getTracks().forEach((track) => track.stop());
+        setStatus("stopped");
+      };
+    </script>
+  </body>
+</html>
