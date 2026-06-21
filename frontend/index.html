@@ -833,7 +833,7 @@
 
       let currentDetections = [];
 
-      // Drawing Bounding Boxes (Used in all modes)
+      // Drawing Bounding Boxes and Polygons (Used in all modes)
       function drawBoundingBoxes(ctx) {
         const w = overlay.width;
         const h = overlay.height;
@@ -856,13 +856,36 @@
           const strokeStyleColor = isHealthy ? "#4caf50" : "#ef4444";
           const secondaryColor = isHealthy ? "rgba(123, 198, 118, 0.15)" : "rgba(252, 165, 165, 0.15)";
           
-          ctx.strokeStyle = strokeStyleColor;
-          ctx.lineWidth = 4;
-          ctx.lineJoin = "round";
-          ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-          
-          ctx.fillStyle = secondaryColor;
-          ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+          // Draw mask polygon if available
+          if (det.mask_xy && det.mask_xy.length > 0) {
+            ctx.beginPath();
+            det.mask_xy.forEach((pt, ptIdx) => {
+              const px = pt[0] * scaleX;
+              const py = pt[1] * scaleY;
+              if (ptIdx === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+            
+            // Draw background fill
+            ctx.fillStyle = secondaryColor;
+            ctx.fill();
+            
+            // Draw polygon contour outline
+            ctx.strokeStyle = strokeStyleColor;
+            ctx.lineWidth = 3.5;
+            ctx.lineJoin = "round";
+            ctx.stroke();
+          } else {
+            // Draw box fallback
+            ctx.strokeStyle = strokeStyleColor;
+            ctx.lineWidth = 4;
+            ctx.lineJoin = "round";
+            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            
+            ctx.fillStyle = secondaryColor;
+            ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+          }
 
           const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
           const text = `${det.track_id !== null ? '[ID:' + det.track_id + '] ' : ''}${formatLabel(label)} ${(conf * 100).toFixed(0)}%`;
@@ -959,6 +982,20 @@
           cropCanvas.height = boxHeight;
           
           const ctx = cropCanvas.getContext("2d");
+          
+          // Clip to leaf polygon if mask_xy is present
+          if (det.mask_xy && det.mask_xy.length > 0) {
+            ctx.beginPath();
+            det.mask_xy.forEach((pt, ptIdx) => {
+              const px = pt[0] - x1;
+              const py = pt[1] - y1;
+              if (ptIdx === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+            ctx.clip();
+          }
+          
           ctx.drawImage(
             frameImageObj,
             x1, y1, boxWidth, boxHeight, 
