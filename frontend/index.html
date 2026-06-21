@@ -20,17 +20,17 @@
             },
             colors: {
               pastel: {
-                bg: '#09090b',         // Zinc 950 (Dark mode primary)
-                card: 'rgba(24, 24, 27, 0.75)',  // Zinc 900 Glass
-                border: 'rgba(39, 39, 42, 0.8)', // Zinc 800 Semi-opaque
-                green: '#10b981',       // Emerald 500
-                greenLight: 'rgba(16, 185, 129, 0.08)', // Emerald 10%
-                greenDark: '#34d399',   // Emerald 400
-                pink: '#ef4444',        // Red 500
-                pinkLight: 'rgba(239, 68, 68, 0.08)', // Red 10%
-                pinkDark: '#f87171',    // Red 400
-                cream: 'rgba(9, 9, 11, 0.6)', // Translucent dark
-                accent: '#f59e0b'       // Amber 500
+                bg: '#f7fcf6',         // Cute light green-gray
+                card: '#ffffff',       // Pure white cards
+                border: '#e2efe1',     // Soft pastel green border
+                green: '#7bc676',       // Leaf green
+                greenLight: '#ebf7ea', // Light green 10%
+                greenDark: '#2c5e29',   // Dark forest green
+                pink: '#ff8b8b',        // Cute coral pink
+                pinkLight: '#fff1f2',  // Pink 10%
+                pinkDark: '#9f1239',    // Dark pink
+                cream: '#fdfbf7',      // Warm cream
+                accent: '#ffa07a'       // Soft orange
               }
             }
           }
@@ -41,58 +41,59 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
       body {
-        background-color: #09090b;
+        background-color: #f7fcf6;
         background-image: 
-          radial-gradient(at 50% 0%, rgba(16, 185, 129, 0.07) 0px, transparent 55%),
-          radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.02) 0px, transparent 40%),
-          linear-gradient(rgba(255, 255, 255, 0.005) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.005) 1px, transparent 1px);
-        background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
-        background-position: 0 0, 0 0, 0 0, 0 0;
+          radial-gradient(at 50% 0%, rgba(123, 198, 118, 0.15) 0px, transparent 60%),
+          radial-gradient(at 0% 100%, rgba(123, 198, 118, 0.04) 0px, transparent 40%),
+          radial-gradient(#e8eedf 1.5px, transparent 1.5px), 
+          radial-gradient(#e8eedf 1.5px, #f5faf2 1.5px);
+        background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+        background-position: 0 0, 0 0, 0 0, 20px 20px;
       }
       
       .glass-panel {
-        background: rgba(24, 24, 27, 0.7);
+        background: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        border: 1px solid #e2efe1;
       }
 
       .glass-panel-intense {
-        background: rgba(18, 18, 20, 0.85);
+        background: rgba(255, 255, 255, 0.96);
         backdrop-filter: blur(24px);
         -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid #e2efe1;
       }
 
       .cute-shadow {
-        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+        box-shadow: 0 6px 0px 0px #d0e4cd;
+        border: 4px solid #e2efe1 !important;
       }
       
       .cute-shadow-btn {
-        box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 0px 0px #b8dcb4;
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .cute-shadow-btn:hover {
-        box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
         transform: translateY(-2px);
+        box-shadow: 0 6px 0px 0px #b8dcb4;
       }
       .cute-shadow-btn:active {
-        transform: translateY(1px);
-        box-shadow: 0 0 8px rgba(16, 185, 129, 0.15);
+        transform: translateY(4px);
+        box-shadow: 0 0px 0px 0px transparent;
       }
 
       .cute-shadow-btn-pink {
-        box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 0px 0px #fca5a5;
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .cute-shadow-btn-pink:hover {
-        box-shadow: 0 0 25px rgba(239, 68, 68, 0.35);
         transform: translateY(-2px);
+        box-shadow: 0 6px 0px 0px #fca5a5;
       }
       .cute-shadow-btn-pink:active {
-        transform: translateY(1px);
-        box-shadow: 0 0 8px rgba(239, 68, 68, 0.15);
+        transform: translateY(4px);
+        box-shadow: 0 0px 0px 0px transparent;
       }
 
       /* Custom Scrollbars */
@@ -100,15 +101,15 @@
         width: 6px;
       }
       .custom-scrollbar::-webkit-scrollbar-track {
-        background: rgba(24, 24, 27, 0.3);
+        background: rgba(235, 247, 234, 0.4);
         border-radius: 8px;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(63, 63, 70, 0.6);
+        background: #b8dcb4;
         border-radius: 8px;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(16, 185, 129, 0.5);
+        background: #7bc676;
       }
       
       /* Slide-in animations */
@@ -129,13 +130,13 @@
       /* Pulsing connected status */
       @keyframes pulseRing {
         0% {
-          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+          box-shadow: 0 0 0 0 rgba(123, 198, 118, 0.6);
         }
         70% {
-          box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+          box-shadow: 0 0 0 10px rgba(123, 198, 118, 0);
         }
         100% {
-          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+          box-shadow: 0 0 0 0 rgba(123, 198, 118, 0);
         }
       }
       .status-pulse-connected {
@@ -145,16 +146,16 @@
       /* Breathing live scanner border */
       @keyframes scanningGlow {
         0% {
-          border-color: rgba(39, 39, 42, 0.8);
-          box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+          border-color: #e2efe1;
+          box-shadow: 0 6px 0px 0px #d0e4cd;
         }
         50% {
-          border-color: rgba(16, 185, 129, 0.6);
-          box-shadow: 0 0 25px rgba(16, 185, 129, 0.15), 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+          border-color: #7bc676;
+          box-shadow: 0 0 20px rgba(123, 198, 118, 0.2), 0 6px 0px 0px #b8dcb4;
         }
         100% {
-          border-color: rgba(39, 39, 42, 0.8);
-          box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+          border-color: #e2efe1;
+          box-shadow: 0 6px 0px 0px #d0e4cd;
         }
       }
       .scanning-live {
@@ -166,7 +167,7 @@
         position: absolute;
         width: 14px;
         height: 14px;
-        border-color: rgba(16, 185, 129, 0.65);
+        border-color: rgba(123, 198, 118, 0.7);
         border-style: solid;
         pointer-events: none;
         z-index: 10;
@@ -178,8 +179,8 @@
       .corner-br { bottom: 16px; right: 16px; border-width: 0 2.5px 2.5px 0; }
 
       .scanning-live .corner-bracket {
-        border-color: #34d399;
-        filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.6));
+        border-color: #7bc676;
+        filter: drop-shadow(0 0 4px rgba(123, 198, 118, 0.5));
       }
 
       /* Camera Grid Line Overlay */
@@ -195,29 +196,29 @@
         transition: opacity 0.3s ease;
       }
       .camera-grid.active {
-        opacity: 0.15;
+        opacity: 0.25;
       }
       .camera-grid-line-h {
-        border-bottom: 1px dashed rgba(255, 255, 255, 0.6);
+        border-bottom: 1px dashed rgba(123, 198, 118, 0.4);
       }
       .camera-grid-line-v {
-        border-right: 1px dashed rgba(255, 255, 255, 0.6);
+        border-right: 1px dashed rgba(123, 198, 118, 0.4);
       }
 
       /* Laser Scanline sweep */
       @keyframes scan {
-        0% { top: 0%; opacity: 0.05; }
+        0% { top: 0%; opacity: 0.1; }
         15% { opacity: 0.8; }
         85% { opacity: 0.8; }
-        100% { top: 100%; opacity: 0.05; }
+        100% { top: 100%; opacity: 0.1; }
       }
       .laser-line {
         position: absolute;
         left: 0;
         width: 100%;
         height: 3px;
-        background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.5), rgba(52, 211, 153, 1), rgba(52, 211, 153, 0.5), transparent);
-        box-shadow: 0 0 10px 2px rgba(52, 211, 153, 0.7);
+        background: linear-gradient(90deg, transparent, rgba(123, 198, 118, 0.5), rgba(123, 198, 118, 1), rgba(123, 198, 118, 0.5), transparent);
+        box-shadow: 0 0 10px 2px rgba(123, 198, 118, 0.6);
         pointer-events: none;
         z-index: 8;
         display: none;
@@ -226,32 +227,37 @@
         display: block;
         animation: scan 3s linear infinite;
       }
+      .mode-pill-active {
+        background-color: #7bc676 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 0px 0px #b8dcb4;
+      }
     </style>
   </head>
-  <body class="bg-pastel-bg text-zinc-100 font-sans min-h-screen flex flex-col antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+  <body class="bg-pastel-bg text-zinc-800 font-sans min-h-screen flex flex-col antialiased selection:bg-emerald-500/20 selection:text-emerald-800">
     
     <!-- Top Header -->
-    <header class="glass-panel border-b border-zinc-800/80 sticky top-0 z-40 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4">
+    <header class="border-b-4 border-pastel-border bg-white sticky top-0 z-40 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap justify-between items-center gap-3 sm:gap-4">
       <div class="flex items-center gap-3">
-        <div class="h-10 w-10 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/10">
-          <i data-lucide="leaf" class="text-zinc-950 w-5.5 h-5.5 sm:w-6 sm:h-6 fill-current"></i>
+        <div class="h-10 w-10 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-green-400 to-emerald-300 flex items-center justify-center shadow-md border-2 border-green-500/20">
+          <i data-lucide="leaf" class="text-white w-5.5 h-5.5 sm:w-6 sm:h-6 fill-current"></i>
         </div>
         <div>
-          <h1 class="text-base sm:text-xl font-bold tracking-tight text-zinc-100 font-display flex items-center gap-2">
-            LeafyCare <span class="bg-emerald-500/10 text-emerald-400 text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-semibold font-sans">AI Diagnostics 🍃</span>
+          <h1 class="text-base sm:text-xl font-bold tracking-tight text-pastel-greenDark font-display flex items-center gap-2">
+            LeafyCare <span class="bg-green-100 text-green-700 text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full border border-green-300/40 font-semibold font-sans">AI Diagnostics 🍃</span>
           </h1>
-          <p class="text-[9px] sm:text-[11px] text-zinc-400 font-medium">YOLO26 Leaf Tracker & Classifier Dashboard</p>
+          <p class="text-[9px] sm:text-[11px] text-zinc-500 font-medium">YOLO26 Leaf Tracker & Classifier Dashboard</p>
         </div>
       </div>
       
       <!-- Right Header Actions / Status -->
       <div class="flex items-center gap-2 sm:gap-3">
-        <div class="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] sm:text-xs font-semibold text-zinc-300">
-          <i data-lucide="cpu" class="w-3.5 h-3.5 text-zinc-400"></i>
-          <span>Device: <span id="backend-device" class="font-bold uppercase text-emerald-400">unknown</span></span>
+        <div class="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 rounded-xl bg-pastel-greenLight border-2 border-pastel-border text-[10px] sm:text-xs font-semibold text-pastel-greenDark">
+          <i data-lucide="cpu" class="w-3.5 h-3.5 text-pastel-green"></i>
+          <span>Device: <span id="backend-device" class="font-bold uppercase text-pastel-greenDark">unknown</span></span>
         </div>
-        <div id="status-badge" class="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] sm:text-xs font-bold text-zinc-400 transition-all duration-300">
-          <span class="h-2 w-2 rounded-full bg-zinc-600 animate-pulse" id="status-dot"></span>
+        <div id="status-badge" class="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-zinc-100 border-2 border-zinc-200 text-[10px] sm:text-xs font-bold text-zinc-650 transition-all duration-300">
+          <span class="h-2 w-2 rounded-full bg-zinc-400 animate-pulse" id="status-dot"></span>
           <span id="status-text">Disconnected</span>
         </div>
       </div>
@@ -264,26 +270,26 @@
       <div id="left-panel" class="lg:col-span-8 flex flex-col gap-6 transition-all duration-300">
         
         <!-- Mode Switcher Pills -->
-        <div class="glass-panel rounded-2xl p-1.5 flex flex-row gap-1.5 overflow-x-auto shadow-lg">
+        <div class="bg-white border-4 border-pastel-border rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 flex flex-row gap-1.5 sm:gap-2 overflow-x-auto shadow-sm">
           <button id="btn-mode-realtime" class="flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent mode-pill-active select-none cursor-pointer whitespace-nowrap" onclick="switchMode('realtime')">
             <i data-lucide="video" class="w-4 h-4"></i> Live Camera
           </button>
-          <button id="btn-mode-snapshot" class="flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5 select-none cursor-pointer whitespace-nowrap" onclick="switchMode('snapshot')">
+          <button id="btn-mode-snapshot" class="flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent text-zinc-600 hover:text-zinc-800 hover:bg-zinc-50 select-none cursor-pointer whitespace-nowrap" onclick="switchMode('snapshot')">
             <i data-lucide="camera" class="w-4 h-4"></i> Take Photo
           </button>
-          <button id="btn-mode-upload" class="flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5 select-none cursor-pointer whitespace-nowrap" onclick="switchMode('upload')">
+          <button id="btn-mode-upload" class="flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent text-zinc-600 hover:text-zinc-800 hover:bg-zinc-50 select-none cursor-pointer whitespace-nowrap" onclick="switchMode('upload')">
             <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload Image
           </button>
         </div>
         
         <!-- Interactive Viewport Container -->
-        <div id="viewport-container" class="glass-panel rounded-none sm:rounded-3xl -mx-4 sm:mx-0 overflow-hidden cute-shadow flex flex-col transition-all duration-300 relative">
+        <div id="viewport-container" class="bg-white border-y-4 sm:border-4 border-pastel-border rounded-none sm:rounded-3xl -mx-4 sm:mx-0 overflow-hidden cute-shadow flex flex-col transition-all duration-300 relative">
           
           <!-- Hidden Video tag for webcam pipeline stream -->
           <video id="video" autoplay muted playsinline class="hidden"></video>
           
           <!-- Viewport Box -->
-          <div id="viewport-box" class="w-full relative bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-zinc-800/80 h-[60vh] xs:h-[65vh] sm:h-[70vh] md:h-auto md:aspect-video transition-all duration-300">
+          <div id="viewport-box" class="w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border h-[60vh] xs:h-[65vh] sm:h-[70vh] md:h-auto md:aspect-video transition-all duration-300">
             
             <!-- Corner Brackets (High-Tech Scanner Theme) -->
             <div class="corner-bracket corner-tl"></div>
@@ -309,45 +315,45 @@
             
             <!-- Floating Viewport Actions & Toggles (top-right) -->
             <div class="absolute top-4 right-4 z-20 flex gap-2 pointer-events-auto select-none">
-              <button id="btn-grid-toggle" class="p-2 sm:p-2.5 rounded-xl bg-zinc-900/85 backdrop-blur-md border border-zinc-800 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800 active:scale-95 transition-all shadow-lg flex items-center justify-center cursor-pointer" title="Toggle Grid Alignment Lines">
+              <button id="btn-grid-toggle" class="p-2 sm:p-2.5 rounded-xl bg-white/90 backdrop-blur-sm border-2 border-pastel-border text-zinc-650 hover:text-pastel-green hover:bg-white active:scale-95 transition-all shadow-md flex items-center justify-center cursor-pointer" title="Toggle Grid Alignment Lines">
                 <i data-lucide="grid-3x3" class="w-4 h-4"></i>
               </button>
-              <button id="btn-settings-toggle" class="p-2 sm:p-2.5 rounded-xl bg-zinc-900/85 backdrop-blur-md border border-zinc-800 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800 active:scale-95 transition-all shadow-lg flex items-center justify-center cursor-pointer" title="Quick Settings">
+              <button id="btn-settings-toggle" class="p-2 sm:p-2.5 rounded-xl bg-white/90 backdrop-blur-sm border-2 border-pastel-border text-zinc-650 hover:text-pastel-green hover:bg-white active:scale-95 transition-all shadow-md flex items-center justify-center cursor-pointer" title="Quick Settings">
                 <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
               </button>
-              <button id="btn-theater-toggle" class="p-2 sm:p-2.5 rounded-xl bg-zinc-900/85 backdrop-blur-md border border-zinc-800 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800 active:scale-95 transition-all shadow-lg flex items-center justify-center cursor-pointer" title="Toggle Immersive View">
+              <button id="btn-theater-toggle" class="p-2 sm:p-2.5 rounded-xl bg-white/90 backdrop-blur-sm border-2 border-pastel-border text-zinc-650 hover:text-pastel-green hover:bg-white active:scale-95 transition-all shadow-md flex items-center justify-center cursor-pointer" title="Toggle Immersive View">
                 <i data-lucide="maximize" class="w-4 h-4" id="icon-theater-expand"></i>
                 <i data-lucide="minimize" class="w-4 h-4 hidden" id="icon-theater-collapse"></i>
               </button>
             </div>
             
             <!-- Quick Settings Dropdown Overlay inside Viewport -->
-            <div id="quick-settings-drawer" class="absolute top-16 right-4 z-30 w-72 glass-panel-intense rounded-2xl p-4 shadow-2xl flex flex-col gap-4 transform -translate-y-4 opacity-0 pointer-events-none transition-all duration-300">
-              <div class="flex justify-between items-center border-b border-zinc-800/80 pb-2">
-                <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider font-display flex items-center gap-1.5">
-                  <i data-lucide="settings" class="w-3.5 h-3.5"></i> Scanner Config
+            <div id="quick-settings-drawer" class="absolute top-16 right-4 z-30 w-72 glass-panel-intense border-4 border-pastel-border rounded-3xl p-4 shadow-xl flex flex-col gap-4 transform -translate-y-4 opacity-0 pointer-events-none transition-all duration-300">
+              <div class="flex justify-between items-center border-b-2 border-pastel-border pb-2">
+                <h4 class="text-xs font-bold text-pastel-greenDark uppercase tracking-wider font-display flex items-center gap-1.5">
+                  <i data-lucide="settings" class="w-3.5 h-3.5 text-pastel-green"></i> Scanner Config
                 </h4>
-                <span class="text-[9px] text-zinc-500 font-mono">Live settings</span>
+                <span class="text-[9px] text-zinc-400 font-mono">Live settings</span>
               </div>
               
               <!-- Connection URL (Hidden but kept for script selectors) -->
               <div class="hidden flex-col gap-1.5">
-                <label for="input-ws-url" class="text-[10px] text-zinc-400 font-bold">API Connection URL</label>
-                <input type="text" id="input-ws-url" value="wss://thienphuc12339-leaf.hf.space/ws/detect" class="w-full text-xs bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-300 font-mono" />
+                <label for="input-ws-url" class="text-[10px] text-zinc-500 font-bold">API Connection URL</label>
+                <input type="text" id="input-ws-url" value="wss://thienphuc12339-leaf.hf.space/ws/detect" class="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 text-zinc-700 font-mono" />
               </div>
 
               <!-- Camera Selection -->
               <div class="flex flex-col gap-1.5" id="camera-selector-container">
-                <label for="select-camera" class="text-[10px] text-zinc-400 font-bold">Webcam Device Source</label>
-                <select id="select-camera" class="w-full text-xs bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-300 outline-none focus:border-emerald-500/50 cursor-pointer">
+                <label for="select-camera" class="text-[10px] text-zinc-500 font-bold">Webcam Device Source</label>
+                <select id="select-camera" class="w-full text-xs bg-zinc-50 border-2 border-pastel-border rounded-xl px-3 py-2 text-zinc-700 outline-none focus:border-pastel-green/50 cursor-pointer">
                   <option value="">Fetching devices...</option>
                 </select>
               </div>
 
               <!-- Sizing limits -->
               <div class="flex flex-col gap-1.5" id="resolution-selector-container">
-                <label for="select-resolution" class="text-[10px] text-zinc-400 font-bold">Image Sizing Limits</label>
-                <select id="select-resolution" class="w-full text-xs bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-300 outline-none focus:border-emerald-500/50 cursor-pointer">
+                <label for="select-resolution" class="text-[10px] text-zinc-500 font-bold">Image Sizing Limits</label>
+                <select id="select-resolution" class="w-full text-xs bg-zinc-50 border-2 border-pastel-border rounded-xl px-3 py-2 text-zinc-700 outline-none focus:border-pastel-green/50 cursor-pointer">
                   <option value="640">Standard (640px - Recommended)</option>
                   <option value="960">High Definition (960px)</option>
                   <option value="480">Low Latency (480px)</option>
@@ -357,26 +363,26 @@
               <!-- Compression setting -->
               <div class="flex flex-col gap-1.5">
                 <div class="flex justify-between items-center">
-                  <label for="slider-quality" class="text-[10px] text-zinc-400 font-bold">Quality Compression</label>
-                  <span id="label-quality" class="text-xs font-mono font-bold text-emerald-400">70%</span>
+                  <label for="slider-quality" class="text-[10px] text-zinc-500 font-bold">Quality Compression</label>
+                  <span id="label-quality" class="text-xs font-mono font-bold text-pastel-green">70%</span>
                 </div>
-                <input type="range" id="slider-quality" min="10" max="100" value="70" class="accent-emerald-500 h-1.5 rounded-lg bg-zinc-800 cursor-pointer" />
+                <input type="range" id="slider-quality" min="10" max="100" value="70" class="accent-pastel-green h-1.5 rounded-lg bg-zinc-100 cursor-pointer" />
               </div>
             </div>
             
             <!-- Drag & Drop Upload Overlay -->
-            <div id="upload-container" class="absolute inset-0 bg-zinc-950/90 flex flex-col items-center justify-center p-6 text-center border-2 border-dashed border-zinc-800 m-4 rounded-2xl transition-all duration-300 cursor-pointer hidden hover:border-emerald-500/40 hover:bg-zinc-900/30">
+            <div id="upload-container" class="absolute inset-0 bg-pastel-cream/90 flex flex-col items-center justify-center p-6 text-center border-4 border-dashed border-pastel-green/40 m-4 rounded-2xl transition cursor-pointer hidden hover:bg-pastel-greenLight/20">
               <input type="file" id="file-input" class="hidden" accept="image/jpeg,image/png" />
-              <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 shadow-xl">
-                <i data-lucide="image-up" class="w-8 h-8 text-zinc-500 hover:text-emerald-400 transition-colors"></i>
+              <div class="w-16 h-16 rounded-2xl bg-pastel-greenLight border border-pastel-green/20 flex items-center justify-center mb-4 shadow-sm">
+                <i data-lucide="image-up" class="w-8 h-8 text-pastel-green"></i>
               </div>
-              <h3 class="text-base font-bold text-zinc-200 font-display">Upload Leaf Photo</h3>
-              <p class="text-xs text-zinc-400 mt-2 max-w-xs leading-relaxed">Drag and drop your plant foliage photo here, or browse local files to initiate diagnosis.</p>
+              <h3 class="text-base font-bold text-pastel-greenDark font-display">Upload Leaf Photo</h3>
+              <p class="text-xs text-zinc-500 mt-2 max-w-xs leading-relaxed">Drag and drop your plant foliage photo here, or browse local files to initiate diagnosis.</p>
               <div class="flex gap-3 mt-5 select-none">
-                <button id="btn-browse-file" class="px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-xl font-bold text-xs hover:bg-zinc-800 hover:text-white transition active:scale-95 cursor-pointer">
+                <button id="btn-browse-file" class="px-4 py-2 bg-white border-2 border-pastel-green text-pastel-greenDark rounded-xl font-bold text-xs hover:bg-pastel-greenLight transition active:scale-95 cursor-pointer">
                   Browse Files 📁
                 </button>
-                <button id="btn-demo-file" class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl font-bold text-xs hover:bg-emerald-500 hover:text-white transition active:scale-95 flex items-center gap-1 cursor-pointer">
+                <button id="btn-demo-file" class="px-4 py-2 bg-pastel-greenLight border-2 border-pastel-green text-pastel-greenDark rounded-xl font-bold text-xs hover:bg-pastel-green hover:text-white transition active:scale-95 flex items-center gap-1 cursor-pointer">
                   Try Demo Image 🍃
                 </button>
               </div>
@@ -384,73 +390,73 @@
             
             <!-- Real-time HUD stats (floating bubble) -->
             <div id="floating-hud" class="absolute top-4 left-4 flex flex-col gap-1.5 pointer-events-none transition-all duration-300 select-none">
-              <div class="px-2.5 py-1 rounded-xl bg-zinc-950/80 backdrop-blur-md border border-zinc-800/80 text-[10px] font-bold text-zinc-400 flex items-center gap-2 shadow-lg">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 status-pulse-connected"></span>
-                <span>LATENCY: <span id="stat-latency" class="font-mono text-emerald-400">-</span> ms</span>
+              <div class="px-2.5 py-1 rounded-xl bg-white/95 backdrop-blur-sm border-2 border-pastel-border text-[10px] font-bold text-zinc-600 flex items-center gap-2 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-pastel-green status-pulse-connected"></span>
+                <span>LATENCY: <span id="stat-latency" class="font-mono text-pastel-greenDark">-</span> ms</span>
               </div>
-              <div class="px-2.5 py-1 rounded-xl bg-zinc-950/80 backdrop-blur-md border border-zinc-800/80 text-[10px] font-bold text-zinc-400 flex items-center gap-2 shadow-lg">
+              <div class="px-2.5 py-1 rounded-xl bg-white/95 backdrop-blur-sm border-2 border-pastel-border text-[10px] font-bold text-zinc-600 flex items-center gap-2 shadow-sm">
                 <span class="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
-                <span>FPS: <span id="stat-fps" class="font-mono text-cyan-400">0.0</span></span>
+                <span>FPS: <span id="stat-fps" class="font-mono text-cyan-600">0.0</span></span>
               </div>
-              <div class="px-2.5 py-1 rounded-xl bg-zinc-950/80 backdrop-blur-md border border-zinc-800/80 text-[10px] font-bold text-zinc-400 flex items-center gap-2 shadow-lg">
+              <div class="px-2.5 py-1 rounded-xl bg-white/95 backdrop-blur-sm border-2 border-pastel-border text-[10px] font-bold text-zinc-600 flex items-center gap-2 shadow-sm">
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span>SIZE: <span id="stat-resolution" class="font-mono text-amber-400">0x0</span></span>
+                <span>SIZE: <span id="stat-resolution" class="font-mono text-amber-700">0x0</span></span>
               </div>
             </div>
 
             <!-- Start Session Screen (Watermark) -->
-            <div id="start-overlay" class="absolute inset-0 bg-zinc-950/95 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 transition-all duration-300 z-10">
-              <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mb-4 shadow-xl">
-                <i data-lucide="video" class="w-8 h-8 text-emerald-400 animate-pulse"></i>
+            <div id="start-overlay" class="absolute inset-0 bg-white/95 flex flex-col items-center justify-center text-center p-6 transition-all duration-300 z-10">
+              <div class="w-16 h-16 rounded-2xl bg-pastel-greenLight border-2 border-pastel-green/20 flex items-center justify-center mb-4 shadow-sm">
+                <i data-lucide="video" class="w-8 h-8 text-pastel-green animate-pulse"></i>
               </div>
-              <h3 class="text-lg font-bold text-zinc-200 font-display">Camera Offline</h3>
-              <p class="text-xs text-zinc-400 mt-2 max-w-xs leading-relaxed">Start your webcam streaming feed to identify plant ailments in real time.</p>
-              <button id="btn-start-overlay" class="mt-6 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold hover:from-emerald-400 hover:to-teal-400 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20 border border-emerald-400/20 cursor-pointer select-none">
+              <h3 class="text-lg font-bold text-pastel-greenDark font-display">Camera Offline</h3>
+              <p class="text-xs text-zinc-500 mt-2 max-w-xs leading-relaxed">Start your webcam streaming feed to identify plant ailments in real time.</p>
+              <button id="btn-start-overlay" class="mt-6 px-6 py-3 bg-pastel-green text-white rounded-xl font-bold hover:bg-green-500 active:scale-95 transition-all flex items-center gap-2 border-2 border-green-600/10 shadow-sm cute-shadow-btn cursor-pointer select-none">
                 <i data-lucide="play" class="w-4 h-4 fill-current"></i> Start Camera Stream
               </button>
             </div>
 
             <!-- Loading overlay during static predictions -->
-            <div id="loading-overlay" class="absolute inset-0 bg-zinc-950/85 backdrop-blur-md flex flex-col items-center justify-center hidden z-20 select-none">
-              <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4 shadow-lg shadow-emerald-500/10"></div>
-              <span class="text-xs font-bold text-emerald-400 font-display tracking-wider animate-pulse">Analyzing Foliage Health... 🔎</span>
+            <div id="loading-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center hidden z-20 select-none">
+              <div class="w-12 h-12 border-4 border-pastel-green border-t-transparent rounded-full animate-spin mb-4 shadow-md shadow-pastel-greenLight"></div>
+              <span class="text-xs font-bold text-pastel-greenDark font-display tracking-wider animate-pulse">Analyzing Foliage Health... 🔎</span>
             </div>
 
           </div>
           
           <!-- Bottom Controls Area -->
-          <div class="px-4 py-3 bg-zinc-950/60 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 shadow-inner select-none">
+          <div class="px-3 sm:px-5 py-3 sm:py-4 bg-pastel-cream/50 border-t-4 border-pastel-border flex flex-wrap items-center justify-between gap-3 shadow-inner select-none">
             <!-- Mode 1: Live Controls -->
             <div id="controls-realtime" class="flex items-center gap-3">
-              <button id="btn-stream-toggle" class="p-3 rounded-xl bg-emerald-500 border border-emerald-400/20 text-white font-bold transition active:scale-95 flex items-center justify-center cute-shadow-btn cursor-pointer select-none" title="Play/Pause camera stream">
+              <button id="btn-stream-toggle" class="p-3 rounded-xl bg-pastel-green border-2 border-green-600/10 text-white font-bold transition active:scale-95 flex items-center justify-center cute-shadow-btn cursor-pointer select-none" title="Play/Pause camera stream">
                 <i data-lucide="play" class="w-5 h-5 fill-current" id="icon-stream-play"></i>
                 <i data-lucide="square" class="w-5 h-5 fill-current hidden" id="icon-stream-stop"></i>
               </button>
-              <button id="btn-reset-tracker" class="px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 font-bold text-xs transition active:scale-95 flex items-center gap-2 cursor-pointer select-none">
+              <button id="btn-reset-tracker" class="px-4 py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-xs transition active:scale-95 flex items-center gap-2 cursor-pointer select-none cute-shadow-btn">
                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Clear Tracker
               </button>
             </div>
             
             <!-- Mode 2: Snapshot Controls -->
             <div id="controls-snapshot" class="hidden flex items-center gap-3">
-              <button id="btn-capture-action" class="px-5 py-2.5 rounded-xl bg-emerald-500 border border-emerald-400/20 text-white font-bold text-xs transition active:scale-95 flex items-center gap-2 cute-shadow-btn cursor-pointer select-none">
+              <button id="btn-capture-action" class="px-5 py-2.5 rounded-xl bg-pastel-green border-2 border-green-600/10 text-white font-bold text-xs transition active:scale-95 flex items-center gap-2 cute-shadow-btn cursor-pointer select-none">
                 <i data-lucide="camera" class="w-4 h-4 fill-current"></i> Capture & Analyze
               </button>
-              <button id="btn-retake-action" class="px-5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 font-bold text-xs transition active:scale-95 flex items-center gap-2 cursor-pointer select-none hidden">
+              <button id="btn-retake-action" class="px-5 py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-xs transition active:scale-95 flex items-center gap-2 cursor-pointer select-none hidden cute-shadow-btn">
                 <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Retake
               </button>
             </div>
 
             <!-- Mode 3: Upload Controls -->
             <div id="controls-upload" class="hidden flex items-center gap-3">
-              <button id="btn-clear-upload" class="px-5 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 font-bold text-xs transition active:scale-95 flex items-center gap-2 hover:bg-rose-500/20 cursor-pointer select-none hidden">
+              <button id="btn-clear-upload" class="px-5 py-2.5 rounded-xl bg-rose-100 border-2 border-rose-200 text-rose-700 font-bold text-xs transition active:scale-95 flex items-center gap-2 hover:bg-rose-200 hover:text-white cursor-pointer select-none hidden cute-shadow-btn">
                 <i data-lucide="trash-2" class="w-4 h-4"></i> Clear Image
               </button>
             </div>
             
             <!-- Global Frame Download -->
             <div>
-              <button id="btn-snapshot" class="px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 font-bold text-xs transition active:scale-95 flex items-center gap-2 cursor-pointer select-none" title="Download snapshot">
+              <button id="btn-snapshot" class="px-4 py-2.5 rounded-xl bg-white border-2 border-pastel-border hover:bg-zinc-50 text-zinc-700 font-bold text-xs transition active:scale-95 flex items-center gap-2 cursor-pointer select-none cute-shadow-btn" title="Download snapshot">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Frame
               </button>
             </div>
@@ -463,55 +469,55 @@
       <div id="right-panel" class="lg:col-span-4 flex flex-col gap-6 transition-all duration-300">
 
         <!-- Performance Summary Card -->
-        <div class="glass-panel rounded-3xl p-5 shadow-lg">
-          <h3 class="text-xs font-bold text-emerald-400 tracking-wider uppercase mb-4 flex items-center gap-2 font-display">
-            <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i> Scan Metrics
+        <div class="bg-white border-4 border-pastel-border rounded-3xl p-5 shadow-sm">
+          <h3 class="text-xs font-bold text-pastel-greenDark tracking-wider uppercase mb-4 flex items-center gap-2 font-display">
+            <i data-lucide="activity" class="w-4 h-4 text-pastel-green"></i> Scan Metrics
           </h3>
           <div class="grid grid-cols-2 gap-4">
-            <div class="bg-zinc-950/40 border border-zinc-800 rounded-2xl p-3.5 flex flex-col shadow-inner hover:border-emerald-500/20 transition duration-300">
-              <span class="text-[9px] text-zinc-500 font-bold uppercase">RTT Latency</span>
-              <span id="card-latency" class="text-lg font-bold font-mono text-emerald-400 mt-1">- <span class="text-xs text-zinc-500">ms</span></span>
+            <div class="bg-pastel-cream border-2 border-pastel-border rounded-2xl p-3.5 flex flex-col shadow-inner hover:border-pastel-green/45 transition duration-300">
+              <span class="text-[9px] text-zinc-400 font-bold uppercase">RTT Latency</span>
+              <span id="card-latency" class="text-lg font-bold font-mono text-pastel-greenDark mt-1">- <span class="text-xs text-zinc-400">ms</span></span>
               <p class="text-[9px] text-zinc-500 mt-1">Network roundtrip</p>
             </div>
             
-            <div class="bg-zinc-950/40 border border-zinc-800 rounded-2xl p-3.5 flex flex-col shadow-inner hover:border-emerald-500/20 transition duration-300">
-              <span class="text-[9px] text-zinc-500 font-bold uppercase">Pipeline FPS</span>
-              <span id="card-fps" class="text-lg font-bold font-mono text-emerald-400 mt-1">0.0</span>
+            <div class="bg-pastel-cream border-2 border-pastel-border rounded-2xl p-3.5 flex flex-col shadow-inner hover:border-pastel-green/45 transition duration-300">
+              <span class="text-[9px] text-zinc-400 font-bold uppercase">Pipeline FPS</span>
+              <span id="card-fps" class="text-lg font-bold font-mono text-pastel-greenDark mt-1">0.0</span>
               <p class="text-[9px] text-zinc-500 mt-1">Process frequency</p>
             </div>
 
-            <div class="bg-zinc-950/40 border border-zinc-800 rounded-2xl p-3.5 flex flex-col shadow-inner hover:border-emerald-500/20 transition duration-300">
-              <span class="text-[9px] text-zinc-500 font-bold uppercase">Image Payload</span>
-              <span id="card-payload" class="text-lg font-bold font-mono text-emerald-400 mt-1">0.0 <span class="text-xs text-zinc-500 font-sans">KB</span></span>
+            <div class="bg-pastel-cream border-2 border-pastel-border rounded-2xl p-3.5 flex flex-col shadow-inner hover:border-pastel-green/45 transition duration-300">
+              <span class="text-[9px] text-zinc-400 font-bold uppercase">Image Payload</span>
+              <span id="card-payload" class="text-lg font-bold font-mono text-pastel-greenDark mt-1">0.0 <span class="text-xs text-zinc-400 font-sans">KB</span></span>
               <p class="text-[9px] text-zinc-500 mt-1">Compressed weight</p>
             </div>
 
-            <div class="bg-zinc-950/40 border border-zinc-800 rounded-2xl p-3.5 flex flex-col shadow-inner hover:border-emerald-500/20 transition duration-300">
-              <span class="text-[9px] text-zinc-500 font-bold uppercase">Target Count</span>
-              <span id="card-targets" class="text-lg font-bold font-mono text-emerald-400 mt-1">0</span>
+            <div class="bg-pastel-cream border-2 border-pastel-border rounded-2xl p-3.5 flex flex-col shadow-inner hover:border-pastel-green/45 transition duration-300">
+              <span class="text-[9px] text-zinc-400 font-bold uppercase">Target Count</span>
+              <span id="card-targets" class="text-lg font-bold font-mono text-pastel-greenDark mt-1">0</span>
               <p class="text-[9px] text-zinc-500 mt-1">Leaves scanned</p>
             </div>
           </div>
         </div>
 
         <!-- Live Leaf Crops list container -->
-        <div class="glass-panel rounded-3xl flex-1 flex flex-col min-h-[350px] overflow-hidden cute-shadow">
-          <div class="px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-900/40">
-            <h3 class="text-xs font-bold text-emerald-400 tracking-wider uppercase flex items-center gap-2 font-display">
-              <i data-lucide="clipboard-list" class="w-4 h-4 text-emerald-400"></i> Diagnostic Reports
+        <div class="bg-white border-4 border-pastel-border rounded-3xl flex-1 flex flex-col min-h-[350px] overflow-hidden cute-shadow">
+          <div class="px-5 py-4 border-b-2 border-pastel-border flex items-center justify-between bg-pastel-greenLight/30">
+            <h3 class="text-xs font-bold text-pastel-greenDark tracking-wider uppercase flex items-center gap-2 font-display">
+              <i data-lucide="clipboard-list" class="w-4 h-4 text-pastel-green"></i> Diagnostic Reports
             </h3>
-            <span class="bg-emerald-500 text-white px-2.5 py-0.5 rounded-full text-[9px] font-bold font-mono animate-pulse" id="tracked-counter">0 Active</span>
+            <span class="bg-pastel-green text-white px-2.5 py-0.5 rounded-full text-[9px] font-bold font-mono animate-pulse shadow-sm" id="tracked-counter">0 Active</span>
           </div>
 
           <!-- Card list -->
-          <div id="target-list" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar bg-zinc-950/20">
+          <div id="target-list" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar bg-pastel-cream/20">
             <!-- Empty target placeholder -->
-            <div id="target-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-500">
-              <div class="w-12 h-12 rounded-full border border-dashed border-zinc-800/80 flex items-center justify-center mb-4">
-                <i data-lucide="scan-line" class="w-6 h-6 text-zinc-600"></i>
+            <div id="target-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-400">
+              <div class="w-12 h-12 rounded-full border border-dashed border-pastel-border flex items-center justify-center mb-4">
+                <i data-lucide="scan-line" class="w-6 h-6 text-zinc-300"></i>
               </div>
-              <p class="text-sm font-bold text-zinc-400 font-display">No Diagnostics Yet</p>
-              <p class="text-xs text-zinc-500 max-w-[200px] mt-1.5 leading-relaxed">Foliage detections will register report cards here in real-time.</p>
+              <p class="text-sm font-bold text-zinc-500 font-display">No Diagnostics Yet</p>
+              <p class="text-xs text-zinc-400 max-w-[200px] mt-1.5 leading-relaxed">Foliage detections will register report cards here in real-time.</p>
             </div>
           </div>
         </div>
@@ -521,9 +527,9 @@
     </main>
 
     <!-- Footer -->
-    <footer class="mt-auto py-4 text-center text-[10px] text-zinc-500 border-t border-zinc-900/60 bg-zinc-950/20 shadow-inner select-none">
+    <footer class="mt-auto py-4 text-center text-[10px] text-zinc-500 border-t border-pastel-border bg-pastel-cream/30 shadow-inner select-none">
       <div class="flex items-center justify-center gap-2">
-        <i data-lucide="leaf" class="w-3.5 h-3.5 text-emerald-500 fill-current opacity-60"></i>
+        <i data-lucide="leaf" class="w-3.5 h-3.5 text-pastel-green fill-current opacity-70"></i>
         <span>LeafyCare AI Diagnostics • Powered by YOLO26 Seg & EfficientNetV2 • Designed with ❤️</span>
       </div>
     </footer>
@@ -532,11 +538,11 @@
     <canvas id="hidden-capture" class="hidden"></canvas>
     
     <!-- Toast notifications -->
-    <div id="toast" class="fixed bottom-6 right-6 px-5 py-3.5 rounded-2xl bg-zinc-900/90 backdrop-blur-md border border-zinc-800 text-zinc-100 text-sm shadow-2xl flex items-center gap-3 translate-y-24 opacity-0 transition-all duration-300 pointer-events-none z-50">
-      <div class="p-1 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center">
-        <i data-lucide="info" class="w-4 h-4 text-emerald-400" id="toast-icon"></i>
+    <div id="toast" class="fixed bottom-6 right-6 px-5 py-3.5 rounded-2xl bg-white border-4 border-pastel-border text-zinc-800 text-sm shadow-2xl flex items-center gap-3 translate-y-24 opacity-0 transition-all duration-300 pointer-events-none z-50">
+      <div class="p-1 rounded-lg bg-pastel-greenLight border border-pastel-border flex items-center justify-center">
+        <i data-lucide="info" class="w-4 h-4 text-pastel-green" id="toast-icon"></i>
       </div>
-      <span id="toast-message" class="font-semibold text-xs text-zinc-200">Notification</span>
+      <span id="toast-message" class="font-semibold text-xs text-zinc-700">Notification</span>
     </div>
 
     <!-- Frontend Script Logic -->
@@ -651,16 +657,16 @@
       function toggleTheaterMode() {
         isTheaterMode = !isTheaterMode;
         if (isTheaterMode) {
-          viewportContainer.className = "fixed inset-0 z-50 w-screen h-screen bg-zinc-950 flex flex-col border-0 rounded-none transition-all duration-300";
-          viewportBox.className = "flex-1 w-full relative bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-zinc-900";
-          rightPanel.className = "fixed right-4 top-20 bottom-4 w-[340px] sm:w-[380px] z-50 glass-panel rounded-3xl flex flex-col shadow-2xl transition-all duration-300 pointer-events-auto";
+          viewportContainer.className = "fixed inset-0 z-50 w-screen h-screen bg-pastel-bg flex flex-col border-0 rounded-none transition-all duration-300";
+          viewportBox.className = "flex-1 w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border";
+          rightPanel.className = "fixed right-4 top-20 bottom-4 w-[340px] sm:w-[380px] z-50 bg-white/95 border-4 border-pastel-border rounded-3xl flex flex-col shadow-2xl transition-all duration-300 pointer-events-auto";
           
           iconTheaterExpand.classList.add("hidden");
           iconTheaterCollapse.classList.remove("hidden");
           showToast("Immersive view enabled", "success");
         } else {
-          viewportContainer.className = "glass-panel rounded-none sm:rounded-3xl -mx-4 sm:mx-0 overflow-hidden cute-shadow flex flex-col transition-all duration-300 relative";
-          viewportBox.className = "w-full relative bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-zinc-800/80 h-[60vh] xs:h-[65vh] sm:h-[70vh] md:h-auto md:aspect-video transition-all duration-300";
+          viewportContainer.className = "bg-white border-y-4 sm:border-4 border-pastel-border rounded-none sm:rounded-3xl -mx-4 sm:mx-0 overflow-hidden cute-shadow flex flex-col transition-all duration-300 relative";
+          viewportBox.className = "w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border h-[60vh] xs:h-[65vh] sm:h-[70vh] md:h-auto md:aspect-video transition-all duration-300";
           rightPanel.className = "lg:col-span-4 flex flex-col gap-6 transition-all duration-300";
           
           iconTheaterCollapse.classList.add("hidden");
@@ -692,10 +698,10 @@
           viewportContainer.classList.remove("scanning-live");
         }
 
-        // Update button active state colors (Dark Glass Style)
+        // Update button active state colors (Light Cute Style)
         ['realtime', 'snapshot', 'upload'].forEach(m => {
           const btn = document.getElementById(`btn-mode-${m}`);
-          btn.className = "flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5 select-none cursor-pointer whitespace-nowrap";
+          btn.className = "flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent text-zinc-650 hover:text-zinc-850 hover:bg-zinc-50 select-none cursor-pointer whitespace-nowrap";
         });
         const activeBtn = document.getElementById(`btn-mode-${mode}`);
         activeBtn.className = "flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent mode-pill-active select-none cursor-pointer whitespace-nowrap";
@@ -1352,33 +1358,33 @@
           if (!trackedTargets.has(trackId)) {
             const cardEl = document.createElement("div");
             cardEl.id = `target-card-${trackId}`;
-            cardEl.className = "bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-3 flex flex-col gap-2 transition-all duration-300 shadow-lg hover:border-emerald-500/20 cursor-pointer animate-slide-in select-none";
+            cardEl.className = "bg-white border-4 border-pastel-border rounded-3xl p-3 flex flex-col gap-2 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer animate-slide-in select-none";
             
             cardEl.innerHTML = `
               <div class="flex gap-3.5">
-                <div class="h-16 w-16 bg-zinc-950 rounded-xl overflow-hidden border border-zinc-800 flex-shrink-0 flex items-center justify-center relative shadow-inner">
+                <div class="h-16 w-16 bg-pastel-cream rounded-xl overflow-hidden border-2 border-pastel-border flex-shrink-0 flex items-center justify-center relative shadow-inner">
                   <img id="thumb-${trackId}" src="${cropUrl || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'></svg>'}" class="object-cover w-full h-full" />
-                  <span class="absolute top-1 left-1 bg-black/70 px-1.5 py-0.5 rounded-lg text-[8px] font-bold font-mono text-zinc-300">ID: ${trackId}</span>
+                  <span class="absolute top-1 left-1 bg-pastel-greenDark/80 px-1.5 py-0.5 rounded-lg text-[8px] font-bold font-mono text-white">ID: ${trackId}</span>
                 </div>
                 
                 <div class="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <div class="flex justify-between items-start gap-1">
-                      <h4 class="font-bold text-xs text-zinc-100 truncate font-display" id="label-${trackId}">${formatLabel(label)}</h4>
-                      <span id="badge-${trackId}" class="px-2 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap ${isHealthy ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
+                      <h4 class="font-bold text-xs text-pastel-greenDark truncate font-display" id="label-${trackId}">${formatLabel(label)}</h4>
+                      <span id="badge-${trackId}" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap ${isHealthy ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'}">
                         ${isHealthy ? 'Healthy' : 'Diseased'}
                       </span>
                     </div>
-                    <p class="text-[9px] text-zinc-500 mt-0.5 font-medium">Detector Confidence: ${(det.leaf_confidence * 100).toFixed(0)}%</p>
+                    <p class="text-[9px] text-zinc-550 mt-0.5 font-medium">Detector Confidence: ${(det.leaf_confidence * 100).toFixed(0)}%</p>
                   </div>
                   
                   <div class="mt-2">
-                    <div class="flex justify-between text-[9px] text-zinc-400 font-bold mb-1">
+                    <div class="flex justify-between text-[9px] text-zinc-550 font-bold mb-1">
                       <span>Diagnosis Confidence</span>
-                      <span class="text-zinc-300 font-mono" id="conf-${trackId}">${(conf * 100).toFixed(0)}%</span>
+                      <span class="text-zinc-700 font-mono" id="conf-${trackId}">${(conf * 100).toFixed(0)}%</span>
                     </div>
-                    <div class="w-full bg-zinc-950 border border-zinc-850 rounded-full h-1.5 overflow-hidden shadow-inner">
-                      <div id="progress-${trackId}" class="h-full rounded-full transition-all duration-300 ${isHealthy ? 'bg-emerald-500' : 'bg-rose-500'}" style="width: ${conf * 100}%"></div>
+                    <div class="w-full bg-zinc-100 border border-zinc-200 rounded-full h-1.5 overflow-hidden shadow-inner">
+                      <div id="progress-${trackId}" class="h-full rounded-full transition-all duration-300 ${isHealthy ? 'bg-pastel-green' : 'bg-pastel-pink'}" style="width: ${conf * 100}%"></div>
                     </div>
                   </div>
                 </div>
@@ -1386,17 +1392,17 @@
               
               <!-- Collapsible remedy details block -->
               <div id="remedy-drawer-${trackId}" class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out border-t border-transparent">
-                <div class="pt-2.5 mt-1 border-t border-zinc-800/80 flex flex-col gap-1">
-                  <div class="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400">
-                    <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i> Treatment Tips:
+                <div class="pt-2.5 mt-1 border-t border-pastel-border flex flex-col gap-1">
+                  <div class="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-pastel-greenDark">
+                    <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-pastel-green"></i> Treatment Tips:
                   </div>
-                  <p class="text-[10px] text-zinc-400 leading-relaxed font-sans">${remedyInfo.remedy}</p>
+                  <p class="text-[10px] text-zinc-600 leading-relaxed font-sans">${remedyInfo.remedy}</p>
                 </div>
               </div>
 
               <!-- Click indicators at bottom card center -->
               <div class="flex justify-center mt-1 -mb-1">
-                <i data-lucide="chevron-down" id="expand-indicator-${trackId}" class="w-3.5 h-3.5 text-zinc-600 transition-transform duration-300"></i>
+                <i data-lucide="chevron-down" id="expand-indicator-${trackId}" class="w-3.5 h-3.5 text-zinc-550 transition-transform duration-300"></i>
               </div>
             `;
 
@@ -1410,12 +1416,12 @@
               if (isClosed) {
                 drawer.style.maxHeight = drawer.scrollHeight + "px";
                 drawer.classList.remove("border-transparent");
-                drawer.classList.add("border-zinc-800");
+                drawer.classList.add("border-pastel-border");
                 if (indicator) indicator.style.transform = "rotate(180deg)";
               } else {
                 drawer.style.maxHeight = "0px";
                 drawer.classList.add("border-transparent");
-                drawer.classList.remove("border-zinc-800");
+                drawer.classList.remove("border-pastel-border");
                 if (indicator) indicator.style.transform = "rotate(0deg)";
               }
             };
@@ -1444,13 +1450,13 @@
             progressEl.style.width = `${conf * 100}%`;
 
             if (isHealthy) {
-              badgeEl.className = "px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+              badgeEl.className = "px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200";
               badgeEl.textContent = "Healthy";
-              progressEl.className = "h-full rounded-full transition-all duration-300 bg-emerald-500";
+              progressEl.className = "h-full rounded-full transition-all duration-300 bg-pastel-green";
             } else {
-              badgeEl.className = "px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+              badgeEl.className = "px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-200";
               badgeEl.textContent = "Diseased";
-              progressEl.className = "h-full rounded-full transition-all duration-300 bg-rose-500";
+              progressEl.className = "h-full rounded-full transition-all duration-300 bg-pastel-pink";
             }
           }
         });
