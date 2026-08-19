@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from functools import lru_cache
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -126,8 +127,8 @@ def classes() -> dict:
 async def predict_image(
     file: UploadFile = File(...),
     tracker: bool = False,
-    detector_conf: float | None = None,
-    classifier_conf: float | None = None,
+    detector_conf: Optional[float] = None,
+    classifier_conf: Optional[float] = None,
 ) -> dict:
     image_bytes = await file.read()
     frame = decode_image_bytes(image_bytes)
