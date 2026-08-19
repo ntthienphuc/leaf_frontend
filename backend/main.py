@@ -20,7 +20,8 @@ app = FastAPI(title="Leaf Disease Real-Time API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    # The frontend sends no cookies; wildcard origins cannot be combined with credentials.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -37,8 +38,15 @@ def get_pipeline() -> LeafDiseasePipeline:
         detector_conf=settings.detector_conf,
         detector_iou=settings.detector_iou,
         classifier_imgsz=settings.classifier_imgsz,
+        classifier_conf=settings.classifier_conf,
+        min_leaf_area_ratio=settings.min_leaf_area_ratio,
+        max_leaf_area_ratio=settings.max_leaf_area_ratio,
+        min_mask_box_fill_ratio=settings.min_mask_box_fill_ratio,
+        max_leaf_aspect_ratio=settings.max_leaf_aspect_ratio,
         crop_padding=settings.crop_padding,
         smoothing_window=settings.smoothing_window,
+        classifier_interval=settings.classifier_interval,
+        classifier_motion_threshold=settings.classifier_motion_threshold,
     )
 
 
@@ -94,6 +102,16 @@ def health() -> dict:
         "detector": str(settings.leaf_detector_path),
         "classifier": str(settings.disease_classifier_path),
         "classes": pipeline.classifier.class_names,
+        "thresholds": {
+            "detector_conf": settings.detector_conf,
+            "classifier_conf": settings.classifier_conf,
+            "min_leaf_area_ratio": settings.min_leaf_area_ratio,
+            "max_leaf_area_ratio": settings.max_leaf_area_ratio,
+            "min_mask_box_fill_ratio": settings.min_mask_box_fill_ratio,
+            "max_leaf_aspect_ratio": settings.max_leaf_aspect_ratio,
+            "classifier_interval": settings.classifier_interval,
+            "classifier_motion_threshold": settings.classifier_motion_threshold,
+        },
     }
 
 
@@ -105,10 +123,20 @@ def classes() -> dict:
 
 @app.post("/predict/image")
 @app.post("/ws/predict/image")
-async def predict_image(file: UploadFile = File(...), tracker: bool = False) -> dict:
+async def predict_image(
+    file: UploadFile = File(...),
+    tracker: bool = False,
+    detector_conf: float | None = None,
+    classifier_conf: float | None = None,
+) -> dict:
     image_bytes = await file.read()
     frame = decode_image_bytes(image_bytes)
-    return get_pipeline().process_frame(frame, use_tracker=tracker)
+    return get_pipeline().process_frame(
+        frame,
+        use_tracker=tracker,
+        detector_conf=detector_conf,
+        classifier_conf=classifier_conf,
+    )
 
 
 @app.post("/tracker/reset")
@@ -122,6 +150,8 @@ def reset_tracker() -> dict:
 async def detect_websocket(websocket: WebSocket) -> None:
     await websocket.accept()
     pipeline = get_pipeline()
+    session_detector_conf = settings.detector_conf
+    session_classifier_conf = settings.classifier_conf
 
     try:
         while True:
@@ -129,7 +159,12 @@ async def detect_websocket(websocket: WebSocket) -> None:
 
             if "bytes" in message and message["bytes"] is not None:
                 frame = decode_image_bytes(message["bytes"])
-                result = pipeline.process_frame(frame, use_tracker=True)
+                result = pipeline.process_frame(
+                    frame,
+                    use_tracker=True,
+                    detector_conf=session_detector_conf,
+                    classifier_conf=session_classifier_conf,
+                )
                 await websocket.send_json(result)
                 continue
 
@@ -137,6 +172,18 @@ async def detect_websocket(websocket: WebSocket) -> None:
                 continue
 
             payload = json.loads(message["text"])
+
+            if payload.get("type") == "config":
+                session_detector_conf = payload.get("detector_conf", session_detector_conf)
+                session_classifier_conf = payload.get("classifier_conf", session_classifier_conf)
+                await websocket.send_json({
+                    "ok": True,
+                    "type": "config",
+                    "detector_conf": session_detector_conf,
+                    "classifier_conf": session_classifier_conf,
+                })
+                continue
+
             if payload.get("type") == "reset":
                 pipeline.reset_tracker()
                 await websocket.send_json({"ok": True, "type": "reset"})
@@ -148,7 +195,12 @@ async def detect_websocket(websocket: WebSocket) -> None:
                     data_url = data_url.split(",", 1)[1]
                 image_bytes = base64.b64decode(data_url)
                 frame = decode_image_bytes(image_bytes)
-                result = pipeline.process_frame(frame, use_tracker=payload.get("tracker", True))
+                result = pipeline.process_frame(
+                    frame,
+                    use_tracker=payload.get("tracker", True),
+                    detector_conf=payload.get("detector_conf", session_detector_conf),
+                    classifier_conf=payload.get("classifier_conf", session_classifier_conf),
+                )
                 await websocket.send_json(result)
                 continue
 

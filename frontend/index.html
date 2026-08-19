@@ -368,6 +368,24 @@
                 </div>
                 <input type="range" id="slider-quality" min="10" max="100" value="70" class="accent-pastel-green h-1.5 rounded-lg bg-zinc-100 cursor-pointer" />
               </div>
+
+              <!-- Detection Confidence Threshold -->
+              <div class="flex flex-col gap-1.5">
+                <div class="flex justify-between items-center">
+                  <label for="slider-detector-conf" class="text-[10px] text-zinc-500 font-bold">Leaf Detection (YOLO)</label>
+                  <span id="label-detector-conf" class="text-xs font-mono font-bold text-pastel-green">45%</span>
+                </div>
+                <input type="range" id="slider-detector-conf" min="10" max="90" value="45" class="accent-pastel-green h-1.5 rounded-lg bg-zinc-100 cursor-pointer" />
+              </div>
+
+              <!-- Classification Confidence Threshold -->
+              <div class="flex flex-col gap-1.5">
+                <div class="flex justify-between items-center">
+                  <label for="slider-classifier-conf" class="text-[10px] text-zinc-500 font-bold">Disease Classifier (Min Conf)</label>
+                  <span id="label-classifier-conf" class="text-xs font-mono font-bold text-pastel-green">35%</span>
+                </div>
+                <input type="range" id="slider-classifier-conf" min="10" max="90" value="35" class="accent-pastel-green h-1.5 rounded-lg bg-zinc-100 cursor-pointer" />
+              </div>
             </div>
             
             <!-- Drag & Drop Upload Overlay -->
@@ -573,6 +591,10 @@
       const selectResolution = document.getElementById("select-resolution");
       const sliderQuality = document.getElementById("slider-quality");
       const labelQuality = document.getElementById("label-quality");
+      const sliderDetectorConf = document.getElementById("slider-detector-conf");
+      const labelDetectorConf = document.getElementById("label-detector-conf");
+      const sliderClassifierConf = document.getElementById("slider-classifier-conf");
+      const labelClassifierConf = document.getElementById("label-classifier-conf");
       const inputWsUrl = document.getElementById("input-ws-url");
       
       const statusBadge = document.getElementById("status-badge");
@@ -618,6 +640,7 @@
       // Keep track of latest frame image to crop tracked items in browser
       let frameImageObj = new Image();
       let lastCaptureBlob = null;
+      let lastCaptureObjectUrl = null;
       let isDrawing = false;
       let staticUploadedFile = null;
 
@@ -652,6 +675,14 @@
       }
       const savedRes = localStorage.getItem("leafsense_resolution");
       if (savedRes) selectResolution.value = savedRes;
+
+      const savedDetectorConf = localStorage.getItem("leafsense_detector_conf_v2") || "45";
+      sliderDetectorConf.value = savedDetectorConf;
+      labelDetectorConf.textContent = `${savedDetectorConf}%`;
+
+      const savedClassifierConf = localStorage.getItem("leafsense_classifier_conf") || "35";
+      sliderClassifierConf.value = savedClassifierConf;
+      labelClassifierConf.textContent = `${savedClassifierConf}%`;
 
       // Unified Focus/Theater Mode Toggle Handler
       function toggleTheaterMode() {
@@ -837,6 +868,36 @@
         localStorage.setItem("leafsense_quality", e.target.value);
       };
 
+      sliderDetectorConf.oninput = (e) => {
+        labelDetectorConf.textContent = `${e.target.value}%`;
+      };
+
+      sliderDetectorConf.onchange = (e) => {
+        localStorage.setItem("leafsense_detector_conf_v2", e.target.value);
+        sendWsConfig();
+      };
+
+      sliderClassifierConf.oninput = (e) => {
+        labelClassifierConf.textContent = `${e.target.value}%`;
+      };
+
+      sliderClassifierConf.onchange = (e) => {
+        localStorage.setItem("leafsense_classifier_conf", e.target.value);
+        sendWsConfig();
+      };
+
+      function sendWsConfig() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          const detConfVal = parseFloat(sliderDetectorConf.value) / 100.0;
+          const clsConfVal = parseFloat(sliderClassifierConf.value) / 100.0;
+          ws.send(JSON.stringify({
+            type: "config",
+            detector_conf: detConfVal,
+            classifier_conf: clsConfVal
+          }));
+        }
+      }
+
       selectResolution.onchange = (e) => {
         localStorage.setItem("leafsense_resolution", e.target.value);
         if (isStreaming) {
@@ -919,6 +980,7 @@
           updateConnectionStatus("connected");
           showToast("Connected to backend stream", "success");
           fetchBackendMetadata();
+          sendWsConfig(); // Synchronize confidence thresholds
           
           if (isStreaming && currentMode === 'realtime') {
             sendNextFrame();
@@ -1201,16 +1263,12 @@
           originalFrameSize: result.frame
         }));
 
-        if (detections.length > 0) {
-          const tempCanvas = document.createElement("canvas");
-          tempCanvas.width = video.videoWidth;
-          tempCanvas.height = video.videoHeight;
-          tempCanvas.getContext("2d").drawImage(video, 0, 0);
-          
-          frameImageObj.src = tempCanvas.toDataURL("image/jpeg", 0.8);
-          frameImageObj.onload = () => {
-            updateTrackedCardContainer(detections);
-          };
+        if (detections.length > 0 && lastCaptureBlob) {
+          // Use the exact JPEG sent to the API, not a newer camera frame.
+          if (lastCaptureObjectUrl) URL.revokeObjectURL(lastCaptureObjectUrl);
+          lastCaptureObjectUrl = URL.createObjectURL(lastCaptureBlob);
+          frameImageObj.onload = () => updateTrackedCardContainer(currentDetections);
+          frameImageObj.src = lastCaptureObjectUrl;
         } else {
           updateTrackedCardContainer([]);
         }
@@ -1244,7 +1302,7 @@
         ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
         drawBoundingBoxes(ctx);
 
-        updateTrackedCardContainer(detections);
+        updateTrackedCardContainer(currentDetections);
       }
 
       // Generate crop thumbnail
@@ -1256,9 +1314,17 @@
           
           if (boxWidth <= 0 || boxHeight <= 0) return null;
           
+          const resultFrame = det.originalFrameSize || {
+            width: frameImageObj.naturalWidth,
+            height: frameImageObj.naturalHeight
+          };
+          const scaleX = frameImageObj.naturalWidth / resultFrame.width;
+          const scaleY = frameImageObj.naturalHeight / resultFrame.height;
+          if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY)) return null;
+
           const cropCanvas = document.createElement("canvas");
-          cropCanvas.width = boxWidth;
-          cropCanvas.height = boxHeight;
+          cropCanvas.width = Math.max(1, Math.round(boxWidth * scaleX));
+          cropCanvas.height = Math.max(1, Math.round(boxHeight * scaleY));
           
           const ctx = cropCanvas.getContext("2d");
           
@@ -1266,8 +1332,8 @@
           if (det.mask_xy && det.mask_xy.length > 0) {
             ctx.beginPath();
             det.mask_xy.forEach((pt, ptIdx) => {
-              const px = pt[0] - x1;
-              const py = pt[1] - y1;
+              const px = (pt[0] - x1) * scaleX;
+              const py = (pt[1] - y1) * scaleY;
               if (ptIdx === 0) ctx.moveTo(px, py);
               else ctx.lineTo(px, py);
             });
@@ -1277,8 +1343,8 @@
           
           ctx.drawImage(
             frameImageObj,
-            x1, y1, boxWidth, boxHeight, 
-            0, 0, boxWidth, boxHeight     
+            x1 * scaleX, y1 * scaleY, boxWidth * scaleX, boxHeight * scaleY,
+            0, 0, cropCanvas.width, cropCanvas.height
           );
           
           return cropCanvas.toDataURL("image/jpeg", 0.7);
@@ -1601,7 +1667,9 @@
             formData.append("file", blob, "snapshot.jpg");
 
             try {
-              const response = await fetch(`${httpUrl}/predict/image?tracker=false`, {
+              const detConfVal = parseFloat(sliderDetectorConf.value) / 100.0;
+              const clsConfVal = parseFloat(sliderClassifierConf.value) / 100.0;
+              const response = await fetch(`${httpUrl}/predict/image?tracker=false&detector_conf=${detConfVal}&classifier_conf=${clsConfVal}`, {
                 method: "POST",
                 body: formData
               });
@@ -1718,7 +1786,9 @@
         formData.append("file", file);
 
         try {
-          const response = await fetch(`${httpUrl}/predict/image?tracker=false`, {
+          const detConfVal = parseFloat(sliderDetectorConf.value) / 100.0;
+          const clsConfVal = parseFloat(sliderClassifierConf.value) / 100.0;
+          const response = await fetch(`${httpUrl}/predict/image?tracker=false&detector_conf=${detConfVal}&classifier_conf=${clsConfVal}`, {
             method: "POST",
             body: formData
           });

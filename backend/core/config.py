@@ -10,11 +10,19 @@ MODELS_DIR = Path(os.getenv("LEAF_MODELS_DIR", API_DIR / "core" / "models"))
 TRACKERS_DIR = API_DIR / "trackers"
 
 
+def default_detector_path() -> Path:
+    """Prefer the new one-class detector while keeping legacy deployments bootable."""
+    configured = os.getenv("LEAF_DETECTOR_PATH")
+    if configured:
+        return Path(configured)
+    detect_path = MODELS_DIR / "leaf_detector_yolo26n_detect.pt"
+    legacy_path = MODELS_DIR / "leaf_detector_yolo26n_seg.pt"
+    return detect_path if detect_path.is_file() else legacy_path
+
+
 @dataclass(frozen=True)
 class Settings:
-    leaf_detector_path: Path = Path(
-        os.getenv("LEAF_DETECTOR_PATH", MODELS_DIR / "leaf_detector_yolo26n_seg.pt")
-    )
+    leaf_detector_path: Path = default_detector_path()
     disease_classifier_path: Path = Path(
         os.getenv(
             "DISEASE_CLASSIFIER_PATH",
@@ -26,11 +34,18 @@ class Settings:
     )
     device: str = os.getenv("LEAF_DEVICE", "auto")
     detector_imgsz: int = int(os.getenv("LEAF_DETECTOR_IMGSZ", "640"))
-    detector_conf: float = float(os.getenv("LEAF_DETECTOR_CONF", "0.25"))
+    detector_conf: float = float(os.getenv("LEAF_DETECTOR_CONF", "0.45"))
     detector_iou: float = float(os.getenv("LEAF_DETECTOR_IOU", "0.5"))
     classifier_imgsz: int = int(os.getenv("DISEASE_CLASSIFIER_IMGSZ", "320"))
+    classifier_conf: float = float(os.getenv("DISEASE_CLASSIFIER_CONF", "0.35"))
+    min_leaf_area_ratio: float = float(os.getenv("LEAF_MIN_AREA_RATIO", "0.002"))
+    max_leaf_area_ratio: float = float(os.getenv("LEAF_MAX_AREA_RATIO", "0.70"))
+    min_mask_box_fill_ratio: float = float(os.getenv("LEAF_MIN_MASK_BOX_FILL_RATIO", "0.36"))
+    max_leaf_aspect_ratio: float = float(os.getenv("LEAF_MAX_ASPECT_RATIO", "6.0"))
     crop_padding: float = float(os.getenv("LEAF_CROP_PADDING", "0.06"))
     smoothing_window: int = int(os.getenv("LEAF_SMOOTHING_WINDOW", "7"))
+    classifier_interval: int = int(os.getenv("LEAF_CLASSIFIER_INTERVAL", "3"))
+    classifier_motion_threshold: float = float(os.getenv("LEAF_CLASSIFIER_MOTION_THRESHOLD", "0.08"))
     max_frame_side: int = int(os.getenv("LEAF_MAX_FRAME_SIDE", "1280"))
 
 

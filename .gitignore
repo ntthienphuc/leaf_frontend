@@ -6,11 +6,20 @@ ENV/
 # Python cache and bytecode
 __pycache__/
 *.py[cod]
-*$py.class
+*.class
 
 # Temporary archives, notebooks, datasets, and test artifacts
 temp/
 *.log
+data/
+leavesbank_yolo26n_detect_results/
+*.zip
+*.ipynb
+scripts/
+leaf_local.py
+requirements-local.txt
+setup_leaf_local.ps1
+watch_leaf_train.ps1
 
 # IDE and OS configurations
 .vscode/
