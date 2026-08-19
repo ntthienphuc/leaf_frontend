@@ -16,10 +16,10 @@ Hệ thống hỗ trợ truyền hình ảnh trực tiếp qua **WebSocket nhị
 1. [Kiến Trúc Mô Hình 2 Giai Đoạn (System Architecture)](#-kiến-trúc-mô-hình-2-giai-đoạn)
 2. [Nguồn Dữ Liệu & Kỹ Thuật Tiền Xử Lý (Datasets & Data Engineering)](#-nguồn-dữ-liệu--kỹ-thuật-tiền-xử-lý)
 3. [Quy Trình Huấn Luyện Chi Tiết (Training Workflow)](#-quy-trình-huấn-luyện-chi-tiết)
-4. [Cấu Trúc Thư Mục Dự Án (Repository Layout)](#-cấu-trúc-thư-mục-dự-án)
-5. [Hướng Dẫn Chạy & Triển Khai (Deployment)](#-hướng-dẫn-chạy--triển-khai)
-6. [Danh Mục Bệnh & Phác Đồ Nông Nghiệp (Diseases & Treatment)](#-danh-mục-bệnh--phác-đồ-nông-nghiệp)
-7. [Kết Quả Đánh Giá & Đo Lường (Benchmark Results)](#-kết-quả-đánh-giá--đo-lường)
+4. [📊 Kết Quả Đánh Giá & Biểu Đồ Huấn Luyện (Training Results & Metrics)](#-kết-quả-đánh-giá--biểu-đồ-huấn-luyện)
+5. [Cấu Trúc Thư Mục Dự Án (Repository Layout)](#-cấu-trúc-thư-mục-dự-án)
+6. [Hướng Dẫn Chạy & Triển Khai (Deployment)](#-hướng-dẫn-chạy--triển-khai)
+7. [Danh Mục Bệnh & Phác Đồ Nông Nghiệp (Diseases & Treatment)](#-danh-mục-bệnh--phác-đồ-nông-nghiệp)
 
 ---
 
@@ -112,7 +112,6 @@ python scripts/train_yolo26_leaf_seg.py \
     --batch 16 \
     --device 0
 ```
-* **Mô hình đầu ra**: Lưu tại `yolo26_leaf_seg_runs/leaf_yolo26n-seg_img640/weights/best.pt`.
 
 ### Bước 3: Huấn Luyện Stage 2 (Classifier 2 Pha)
 ```bash
@@ -129,7 +128,52 @@ python scripts/train_2stage_server.py \
   * **Loss Function**: Cross-Entropy kết hợp **Label Smoothing (0.1)** và **Class Weights** cân bằng mẫu.
   * **Optimizer**: AdamW ($eta_1=0.9, eta_2=0.999$, Weight Decay = $10^{-4}$).
   * **LR Scheduler**: Cosine Annealing LR kèm 3 epochs khởi động mềm (Warmup).
-* **Mô hình đầu ra**: Lưu tại `backend/core/models/disease_classifier_efficientnet_v2_s_seg.pt`.
+
+---
+
+## 📊 Kết Quả Đánh Giá & Biểu Đồ Huấn Luyện
+
+### 1. Bảng Tổng Hợp Hiệu Năng Các Mô Hình
+
+| Mô Hình | Nhiệm Vụ | Kiến Trúc Backbone | Độ Chính Xác (Metrics) | Tốc Độ Suy Luận (Inference) | Kích Thước File |
+|---|---|---|---|---|---|
+| **YOLO26n-Seg** | Leaf Instance Segmentation | YOLO26 Nano Segment | **94.8% mAP50** (82.3% mAP50-95) | ~4.2 ms / frame | **18.06 MB** |
+| **EfficientNetV2-S** | Disease Classification | EfficientNetV2-S | **97.87% Test Acc (99.70% Val Acc, 0.983 F1)** | ~8.6 ms / batch | **77.84 MB** |
+| **ConvNeXt-Tiny** | Disease Classification | ConvNeXt-Tiny | **96.35% Test Acc (98.78% Val Acc, 0.970 F1)** | ~9.8 ms / batch | **106.2 MB** |
+| **End-to-End WebSocket**| Real-Time Live Streaming | ByteTrack + Cascaded AI | **60 FPS Canvas / ~45ms RTT Latency** | - | **Payload: ~8.2 KB** |
+
+---
+
+### 2. Biểu Đồ Huấn Luyện Stage 1 (YOLO26n-Seg)
+
+Biểu đồ diễn biến hàm mất mát (Box Loss, Seg Loss, DFL Loss) và các chỉ số đo lường độ chính xác (Precision, Recall, mAP50, mAP50-95 cho cả Bounding Box và Segmentation Mask) qua các Epochs:
+
+![YOLO26-Seg Training Curves](experiments/yolo_seg/results.png)
+
+#### Ma Trận Nhầm Lẫn & Đường Cong Precision-Recall (YOLO26-Seg):
+| Normalized Confusion Matrix | Mask Precision-Recall Curve |
+|:---:|:---:|
+| ![YOLO Confusion Matrix](experiments/yolo_seg/confusion_matrix_normalized.png) | ![YOLO Mask PR Curve](experiments/yolo_seg/MaskPR_curve.png) |
+
+---
+
+### 3. Ma Trận Nhầm Lẫn Stage 2 (Disease Classification)
+
+Ma trận nhầm lẫn chi tiết của bộ phân loại bệnh **EfficientNetV2-S** và **ConvNeXt-Tiny** trên tập kiểm thử độc lập (Test Set):
+
+| EfficientNetV2-S (Acc: 97.87%, F1: 0.983) | ConvNeXt-Tiny (Acc: 96.35%, F1: 0.970) |
+|:---:|:---:|
+| ![EfficientNetV2-S Confusion Matrix](experiments/classifiers/efficientnet_v2_s_confusion_matrix.png) | ![ConvNeXt-Tiny Confusion Matrix](experiments/classifiers/convnext_tiny_confusion_matrix.png) |
+
+---
+
+### 4. Kết Quả Kiểm Thử Thực Địa (Real-World Field Validation)
+
+Minh chứng khả năng phát hiện đa lá cây, khoanh vùng viền lá và chẩn đoán phân loại bệnh trực tiếp trên ảnh chụp thực tế ngoài vườn tiêu:
+
+| Mẫu Thực Địa 1 | Mẫu Thực Địa 2 | Mẫu Thực Địa 3 |
+|:---:|:---:|:---:|
+| ![Real Test 1](experiments/real_tests/real_image_1_annotated.jpg) | ![Real Test 2](experiments/real_tests/real_image_2_annotated.jpg) | ![Real Test 3](experiments/real_tests/real_image_3_annotated.jpg) |
 
 ---
 
@@ -141,7 +185,8 @@ Leaf/
 │   ├── core/
 │   │   ├── models/                  # Trọng số mô hình chính thức (<100MB)
 │   │   │   ├── leaf_detector_yolo26n_seg.pt
-│   │   │   └── disease_classifier_efficientnet_v2_s_seg.pt
+│   │   │   ├── disease_classifier_efficientnet_v2_s_seg.pt
+│   │   │   └── classifier_summary.csv
 │   │   ├── classifier.py            # Module phân loại theo batch PyTorch
 │   │   ├── pipeline.py              # Luồng kết hợp 2-Stage + Douglas-Peucker
 │   │   ├── session.py               # Quản lý phiên WebSocket & ByteTrack
@@ -152,6 +197,19 @@ Leaf/
 ├── frontend/
 │   ├── index.html                   # Giao diện Web Responsive đa chức năng
 │   └── demo_leaf.jpg                # Ảnh mẫu thử nghiệm
+├── experiments/                     # Biểu đồ đánh giá huấn luyện & Kết quả thực nghiệm
+│   ├── yolo_seg/                    # Biểu đồ loss, curves, confusion matrix YOLO26-Seg
+│   │   ├── results.png
+│   │   ├── confusion_matrix_normalized.png
+│   │   └── MaskPR_curve.png
+│   ├── classifiers/                 # Ma trận nhầm lẫn & Benchmark CSV Classifier
+│   │   ├── efficientnet_v2_s_confusion_matrix.png
+│   │   ├── convnext_tiny_confusion_matrix.png
+│   │   └── classifier_benchmark_summary.csv
+│   └── real_tests/                  # Ảnh kiểm thử thực địa ngoài vườn
+│       ├── real_image_1_annotated.jpg
+│       ├── real_image_2_annotated.jpg
+│       └── real_image_3_annotated.jpg
 ├── scripts/                         # Mã nguồn xử lý dữ liệu và huấn luyện Server
 │   ├── prepare_leavesbank_seg.py    # Chuyển đổi nhãn LeavesBank sang YOLO Seg
 │   ├── prepare_black_pepper_classifier.py # Tiền xử lý dữ liệu bệnh cây hồ tiêu
@@ -199,16 +257,6 @@ docker run -p 7860:7860 leaf-ai
 | `black_pepper_pollu_disease` | **Thán Thư (Đốm Lá)** | *Colletotrichum gloeosporioides* | Amistar Top 325SC, Score 250EC, Antracol 70WP | 7 ngày |
 | `black_pepper_yellow_mottle_virus`| **Khảm Vàng Lá (Virus)** | PYMV Virus | Phun diệt côn trùng chích hút (Confidor, Movento) | 7 ngày |
 | `black_pepper_leaf_blight` | **Cháy Lá Hoại Tử (Đốm Khô)**| *Rhizoctonia solani* | Coc85, Champion 77WP, Anvil 5SC | 14 ngày |
-
----
-
-## 📊 Kết Quả Đánh Giá & Đo Lường
-
-| Mô Hình | Nhiệm Vụ | Kiến Trúc Backbone | Độ Chính Xác (Metrics) | Tốc Độ Suy Luận (Inference) | Kích Thước File |
-|---|---|---|---|---|---|
-| **YOLO26n-Seg** | Leaf Instance Segmentation | YOLO26 Nano Segment | **94.8% mAP50** (82.3% mAP50-95) | ~4.2 ms / frame | **18.06 MB** |
-| **Disease Classifier** | Fine-Grained Classification | EfficientNetV2-S | **98.6% Test Accuracy** (0.985 F1) | ~8.6 ms / batch | **77.84 MB** |
-| **End-to-End WebSocket**| Real-Time Live Streaming | ByteTrack + Cascaded AI | **60 FPS Canvas / ~45ms RTT Latency** | - | **Payload: ~8.2 KB** |
 
 ---
 

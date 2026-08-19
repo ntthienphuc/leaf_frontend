@@ -35,17 +35,17 @@ scripts/*
 !scripts/test_real_images.py
 !scripts/test_concurrency.py
 
-# Training runs & local test artifacts
+# Training runs & heavy checkpoint weights
 temp/
 *.log
 yolo26_leaf_seg_runs/
 runs/
-experiments/
 leavesbank_yolo26n_detect_results/
 
 # Exclude standalone models exceeding GitHub 100MB limit
+experiments/**/*.pt
+experiments/**/*.onnx
 *.pth
-*.onnx
 
 # IDE and OS configurations
 .vscode/
