@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
+import os
 from functools import lru_cache
 from typing import Optional
 
@@ -10,22 +12,23 @@ import numpy as np
 from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
-import os
+from fastapi.staticfiles import StaticFiles
 
 try:
     from core.config import settings
     from core.pipeline import LeafDiseasePipeline
+    from core.session import UserSessionContext
 except ImportError:
     from backend.core.config import settings
     from backend.core.pipeline import LeafDiseasePipeline
+    from backend.core.session import UserSessionContext
 
 
-app = FastAPI(title="Leaf Disease Real-Time API", version="0.1.0")
+app = FastAPI(title="Leaf Disease Real-Time API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    # The frontend sends no cookies; wildcard origins cannot be combined with credentials.
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,29 +74,24 @@ def resize_max_side(frame: np.ndarray, max_side: int) -> np.ndarray:
 
     scale = max_side / longest
     new_size = (int(round(width * scale)), int(round(height * scale)))
-    return cv2.resize(frame, new_size, interpolation=cv2.INTER_AREA)
+    return cv2.resize(frame, new_size, interpolation=cv2.INTER_LINEAR)
 
 
 @app.on_event("startup")
 def startup() -> None:
-    # Load models once at startup instead of on the first frame.
+    # Warm up models once at startup in background
     get_pipeline()
 
 
 @app.get("/")
 def read_root():
-    # Check in the same directory first
-    index_path = os.path.join(os.path.dirname(__file__), "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    # Check in child frontend directory (e.g. in Docker)
-    child_path = os.path.join(os.path.dirname(__file__), "frontend", "index.html")
-    if os.path.exists(child_path):
-        return FileResponse(child_path)
-    # Check in sibling frontend directory (local dev)
-    sibling_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
-    if os.path.exists(sibling_path):
-        return FileResponse(sibling_path)
+    for p in [
+        os.path.join(os.path.dirname(__file__), "index.html"),
+        os.path.join(os.path.dirname(__file__), "frontend", "index.html"),
+        os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html"),
+    ]:
+        if os.path.exists(p):
+            return FileResponse(p)
     return HTMLResponse("<html><body><h1>Leaf Disease API is running. index.html not found.</h1></body></html>")
 
 
@@ -135,9 +133,12 @@ async def predict_image(
     classifier_conf: Optional[float] = None,
 ) -> dict:
     image_bytes = await file.read()
-    frame = decode_image_bytes(image_bytes)
-    return get_pipeline().process_frame(
+    frame = await asyncio.to_thread(decode_image_bytes, image_bytes)
+    pipeline = get_pipeline()
+    return await asyncio.to_thread(
+        pipeline.process_frame,
         frame,
+        session=None,
         use_tracker=tracker,
         detector_conf=detector_conf,
         classifier_conf=classifier_conf,
@@ -155,67 +156,88 @@ def reset_tracker() -> dict:
 async def detect_websocket(websocket: WebSocket) -> None:
     await websocket.accept()
     pipeline = get_pipeline()
-    session_detector_conf = settings.detector_conf
-    session_classifier_conf = settings.classifier_conf
+    # Instantiate isolated per-user session context
+    session = pipeline.create_session()
 
     try:
         while True:
-            message = await websocket.receive()
+            try:
+                message = await websocket.receive()
+            except (WebSocketDisconnect, RuntimeError):
+                break
+
+            if message.get("type") == "websocket.disconnect":
+                break
 
             if "bytes" in message and message["bytes"] is not None:
-                frame = decode_image_bytes(message["bytes"])
-                result = pipeline.process_frame(
+                frame = await asyncio.to_thread(decode_image_bytes, message["bytes"])
+                result = await asyncio.to_thread(
+                    pipeline.process_frame,
                     frame,
+                    session,
                     use_tracker=True,
-                    detector_conf=session_detector_conf,
-                    classifier_conf=session_classifier_conf,
+                    detector_conf=session.detector_conf,
+                    classifier_conf=session.classifier_conf,
                 )
+                result["session_id"] = session.session_id
                 await websocket.send_json(result)
                 continue
 
             if "text" not in message or message["text"] is None:
                 continue
 
-            payload = json.loads(message["text"])
+            try:
+                payload = json.loads(message["text"])
+            except Exception:
+                continue
 
-            if payload.get("type") == "config":
-                session_detector_conf = payload.get("detector_conf", session_detector_conf)
-                session_classifier_conf = payload.get("classifier_conf", session_classifier_conf)
+            msg_type = payload.get("type")
+
+            if msg_type == "config":
+                session.detector_conf = payload.get("detector_conf", session.detector_conf)
+                session.classifier_conf = payload.get("classifier_conf", session.classifier_conf)
                 await websocket.send_json({
                     "ok": True,
                     "type": "config",
-                    "detector_conf": session_detector_conf,
-                    "classifier_conf": session_classifier_conf,
+                    "session_id": session.session_id,
+                    "detector_conf": session.detector_conf,
+                    "classifier_conf": session.classifier_conf,
                 })
                 continue
 
-            if payload.get("type") == "reset":
-                pipeline.reset_tracker()
-                await websocket.send_json({"ok": True, "type": "reset"})
+            if msg_type == "reset":
+                session.reset()
+                await websocket.send_json({"ok": True, "type": "reset", "session_id": session.session_id})
                 continue
 
-            if payload.get("type") == "frame":
+            if msg_type == "frame":
                 data_url = payload["image"]
                 if "," in data_url:
                     data_url = data_url.split(",", 1)[1]
                 image_bytes = base64.b64decode(data_url)
-                frame = decode_image_bytes(image_bytes)
-                result = pipeline.process_frame(
+                frame = await asyncio.to_thread(decode_image_bytes, image_bytes)
+                result = await asyncio.to_thread(
+                    pipeline.process_frame,
                     frame,
+                    session,
                     use_tracker=payload.get("tracker", True),
-                    detector_conf=payload.get("detector_conf", session_detector_conf),
-                    classifier_conf=payload.get("classifier_conf", session_classifier_conf),
+                    detector_conf=payload.get("detector_conf", session.detector_conf),
+                    classifier_conf=payload.get("classifier_conf", session.classifier_conf),
                 )
+                result["session_id"] = session.session_id
                 await websocket.send_json(result)
                 continue
 
             await websocket.send_json({"ok": False, "error": "Unsupported websocket message"})
 
-    except WebSocketDisconnect:
-        return
+    except (WebSocketDisconnect, RuntimeError):
+        pass
+    finally:
+        # Session memory is cleanly reclaimed
+        session.reset()
+
 
 # Serve static frontend files (assets, demo_leaf.jpg) as fallback
-from fastapi.staticfiles import StaticFiles
 for path in [
     os.path.join(os.path.dirname(__file__), "frontend"),
     os.path.join(os.path.dirname(__file__), "..", "frontend")
@@ -223,4 +245,3 @@ for path in [
     if os.path.exists(path):
         app.mount("/", StaticFiles(directory=path), name="frontend")
         break
-
