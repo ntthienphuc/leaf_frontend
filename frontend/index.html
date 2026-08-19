@@ -1212,6 +1212,10 @@
         const w = overlay.width;
         const h = overlay.height;
 
+        // Dynamic scale factor based on canvas resolution (crisp on 480p, 1080p, 4K)
+        const baseScale = Math.max(1.0, Math.min(w, h) / 480);
+        const lineW = Math.max(5, Math.round(5.0 * baseScale));
+
         currentDetections.forEach(det => {
           const originalFrame = det.originalFrameSize || { width: w, height: h };
           const scaleX = w / originalFrame.width;
@@ -1226,12 +1230,13 @@
           const label = det.stable_disease?.label || det.disease?.label || "healthy";
           const isHealthy = label.toLowerCase().includes("healthy");
           
-          const primaryColor = isHealthy ? "#7bc676" : "#fca5a5"; 
-          const strokeStyleColor = isHealthy ? "#4caf50" : "#ef4444";
-          const secondaryColor = isHealthy ? "rgba(123, 198, 118, 0.15)" : "rgba(252, 165, 165, 0.15)";
+          const strokeStyleColor = isHealthy ? "#22c55e" : "#ef4444";
+          const glowColor = isHealthy ? "rgba(34, 197, 94, 0.55)" : "rgba(239, 68, 68, 0.55)";
+          const secondaryColor = isHealthy ? "rgba(34, 197, 94, 0.25)" : "rgba(239, 68, 68, 0.25)";
           
           // Draw mask polygon if available
           if (det.mask_xy && det.mask_xy.length > 0) {
+            ctx.save();
             ctx.beginPath();
             det.mask_xy.forEach((pt, ptIdx) => {
               const px = pt[0] * scaleX;
@@ -1245,65 +1250,80 @@
             ctx.fillStyle = secondaryColor;
             ctx.fill();
             
-            // Draw polygon contour outline
+            // Draw polygon contour outline with subtle glow for maximum contrast
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = Math.round(8 * baseScale);
             ctx.strokeStyle = strokeStyleColor;
-            ctx.lineWidth = 3.5;
+            ctx.lineWidth = lineW;
             ctx.lineJoin = "round";
+            ctx.lineCap = "round";
             ctx.stroke();
+            ctx.restore();
           } else {
             // Draw box fallback
+            ctx.save();
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = Math.round(8 * baseScale);
             ctx.strokeStyle = strokeStyleColor;
-            ctx.lineWidth = 4;
+            ctx.lineWidth = lineW;
             ctx.lineJoin = "round";
             ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
             
             ctx.fillStyle = secondaryColor;
             ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+            ctx.restore();
           }
 
           const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
           const viLabel = formatLabel(label);
           const text = `${det.track_id !== null ? '#' + det.track_id + ' ' : ''}${viLabel} • ${(conf * 100).toFixed(0)}%`;
           
-          // Responsive font size for high-res screens and mobile
-          const fontSize = Math.max(14, Math.min(22, Math.round(w / 45)));
+          // Prominent, bold, high-contrast label badge
+          const fontSize = Math.max(16, Math.round(18 * baseScale));
           ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif`;
           const textMetrics = ctx.measureText(text);
           const textWidth = textMetrics.width;
-          const padH = 10;
-          const padV = 6;
+          const padH = Math.round(14 * baseScale);
+          const padV = Math.round(8 * baseScale);
           const barHeight = fontSize + padV * 2;
           const barWidth = textWidth + padH * 2;
+          const radius = Math.round(8 * baseScale);
           
-          let barY = y1 - barHeight - 4;
-          if (barY < 0) barY = y1 + 4;
+          let barY = y1 - barHeight - (6 * baseScale);
+          if (barY < 0) barY = y1 + (6 * baseScale);
           let barX = x1;
           if (barX + barWidth > w) barX = Math.max(0, w - barWidth - 4);
           
-          // Badge pill with shadow
+          // Badge pill with prominent drop shadow and border
           ctx.save();
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-          ctx.shadowBlur = 6;
-          ctx.shadowOffsetY = 2;
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+          ctx.shadowBlur = Math.round(8 * baseScale);
+          ctx.shadowOffsetY = Math.round(3 * baseScale);
           
           ctx.fillStyle = strokeStyleColor;
           ctx.beginPath();
           if (ctx.roundRect) {
-            ctx.roundRect(barX, barY, barWidth, barHeight, 6);
+            ctx.roundRect(barX, barY, barWidth, barHeight, radius);
           } else {
             ctx.rect(barX, barY, barWidth, barHeight);
           }
           ctx.fill();
           
+          // Crisp white border around badge
           ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = Math.max(2, Math.round(2.2 * baseScale));
           ctx.stroke();
           ctx.restore();
           
           // Badge text
+          ctx.save();
           ctx.fillStyle = '#ffffff';
           ctx.textBaseline = 'middle';
+          ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif`;
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+          ctx.shadowBlur = 4;
           ctx.fillText(text, barX + padH, barY + barHeight / 2);
+          ctx.restore();
         });
       }
 
