@@ -232,7 +232,28 @@
         color: #ffffff !important;
         box-shadow: 0 4px 0px 0px #b8dcb4;
       }
-    </style>
+    
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #printable-report-card, #printable-report-card * {
+          visibility: visible;
+        }
+        #printable-report-card {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100% !important;
+          max-width: 100% !important;
+          box-shadow: none !important;
+          border: 1px solid #ccc !important;
+        }
+        #btn-close-report-modal, #btn-print-report-action {
+          display: none !important;
+        }
+      }
+</style>
   </head>
   <body class="bg-pastel-bg text-zinc-800 font-sans min-h-screen flex flex-col antialiased selection:bg-emerald-500/20 selection:text-emerald-800">
     
@@ -2048,6 +2069,426 @@
         }
       });
 
+    
+
+      // ==========================================
+      // SUPER FEATURES: Voice, Dosage Calc & Report
+      // ==========================================
+
+      // 1. Text-to-Speech (Vietnamese Voice Reader)
+      function speakText(text) {
+        if (!('speechSynthesis' in window)) {
+          showToast("Trình duyệt không hỗ trợ đọc giọng nói", "error");
+          return;
+        }
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "vi-VN";
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+        
+        // Find Vietnamese voice if available
+        const voices = window.speechSynthesis.getVoices();
+        const viVoice = voices.find(v => v.lang.includes("vi") || v.lang.includes("VI"));
+        if (viVoice) utterance.voice = viVoice;
+
+        window.speechSynthesis.speak(utterance);
+        showToast("🔊 Đang đọc kết quả chẩn đoán...");
+      }
+
+      if (document.getElementById("btn-speak-all")) {
+        document.getElementById("btn-speak-all").addEventListener("click", () => {
+          if (!currentDetections || currentDetections.length === 0) {
+            speakText("Chưa phát hiện chiếc lá nào trong khung hình. Vui lòng hướng camera vào tán lá hồ tiêu.");
+            return;
+          }
+          const total = currentDetections.length;
+          const diseased = currentDetections.filter(d => !(d.stable_disease?.label || d.disease?.label || "").toLowerCase().includes("healthy"));
+          let msg = `Phát hiện tổng cộng ${total} chiếc lá trên cây hồ tiêu. `;
+          if (diseased.length === 0) {
+            msg += "Tất cả các lá đều khỏe mạnh, tán lá phát triển rất tốt.";
+          } else {
+            msg += `Trong đó có ${diseased.length} lá có dấu hiệu bệnh. `;
+            diseased.forEach((d, i) => {
+              const label = formatLabel(d.stable_disease?.label || d.disease?.label);
+              const conf = ((d.stable_disease?.confidence || d.disease?.confidence || 0) * 100).toFixed(0);
+              msg += `Lá số ${i + 1}: ${label}, độ tin cậy ${conf} phần trăm. `;
+            });
+            const firstKey = (diseased[0].stable_disease?.label || diseased[0].disease?.label || "").toLowerCase().replace(/_/g, " ").trim();
+            const remedy = REMEDIES[firstKey];
+            if (remedy) {
+              msg += `Khuyến nghị xử lý: ${remedy.remedy}`;
+            }
+          }
+          speakText(msg);
+        });
+      }
+
+      // 2. Update Garden Health Score Meter
+      function updateHealthMeter(detections) {
+        const total = detections.length;
+        const healthBadge = document.getElementById("health-status-badge");
+        const healthPctText = document.getElementById("health-pct-text");
+        const diseasedPctText = document.getElementById("diseased-pct-text");
+        const healthProgressBar = document.getElementById("health-progress-bar");
+
+        if (total === 0) {
+          if (healthBadge) healthBadge.textContent = "Chờ quét...";
+          if (healthPctText) healthPctText.textContent = "100%";
+          if (diseasedPctText) diseasedPctText.textContent = "0%";
+          if (healthProgressBar) healthProgressBar.style.width = "100%";
+          return;
+        }
+
+        const healthyCount = detections.filter(d => (d.stable_disease?.label || d.disease?.label || "").toLowerCase().includes("healthy")).length;
+        const healthyPct = Math.round((healthyCount / total) * 100);
+        const diseasedPct = 100 - healthyPct;
+
+        if (healthPctText) healthPctText.textContent = `${healthyPct}%`;
+        if (diseasedPctText) diseasedPctText.textContent = `${diseasedPct}%`;
+        if (healthProgressBar) healthProgressBar.style.width = `${healthyPct}%`;
+
+        if (healthBadge) {
+          if (healthyPct >= 80) {
+            healthBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+            healthBadge.textContent = `Tốt (${healthyPct}%)`;
+          } else if (healthyPct >= 50) {
+            healthBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300";
+            healthBadge.textContent = `Cần xử lý (${healthyPct}%)`;
+          } else {
+            healthBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300";
+            healthBadge.textContent = `Báo động dịch (${healthyPct}%)`;
+          }
+        }
+      }
+
+      // 3. Pesticide Dosage Calculator Logic
+      const DOSAGE_DATABASE = {
+        footrot: {
+          medicine: "Ridomil Gold 68WG (Metalaxyl-M + Mancozeb) hoặc Aliette 800WG",
+          ratePerLiter: 2.5, // 2.5g / Liter
+          waterPerTree: 3.0, // 3 Liters / tree
+          phi: "14 ngày trước thu hoạch",
+          instructions: "Hòa 500g thuốc vào phuy 200L nước. Tưới đều quanh gốc 3-4 lít/trụ kết hợp phun ướt đều tán lá. Xử lý 2 lần cách nhau 15 ngày."
+        },
+        slow_decline: {
+          medicine: "Velum Prime 400SC (Fluopyram) hoặc Tervigo 020SC (Abamectin)",
+          ratePerLiter: 1.0, // 1ml / Liter
+          waterPerTree: 2.5,
+          phi: "21 ngày trước thu hoạch",
+          instructions: "Pha 200ml thuốc cho phuy 200L nước. Tưới đều gốc khi đất ẩm. Sau 7 ngày bón bổ sung phân hữu cơ vi sinh ủ nấm đối kháng Trichoderma."
+        },
+        pollu_disease: {
+          medicine: "Amistar Top 325SC (Azoxystrobin + Difenoconazole) hoặc Antracol 70WP",
+          ratePerLiter: 1.25,
+          waterPerTree: 1.5,
+          phi: "7 ngày trước thu hoạch",
+          instructions: "Pha 250ml thuốc cho phuy 200L nước. Phun ướt đẫm 2 mặt lá và các chùm quả khi phát hiện vết bệnh đầu tiên."
+        },
+        yellow_mottle_virus: {
+          medicine: "Confidor 200SL hoặc Movento 150OD (Diệt rầy mềm, rệp sáp môi giới)",
+          ratePerLiter: 0.75,
+          waterPerTree: 1.5,
+          phi: "7 ngày trước thu hoạch",
+          instructions: "Bệnh do virus: Không có thuốc diệt trực tiếp virus. Phun thuốc diệt côn trùng chích hút môi giới truyền bệnh. Tiêu hủy cây bệnh nặng."
+        },
+        leaf_blight: {
+          medicine: "Coc85 (Copper Oxychloride) hoặc Anvil 5SC (Hexaconazole)",
+          ratePerLiter: 2.0,
+          waterPerTree: 1.5,
+          phi: "14 ngày trước thu hoạch",
+          instructions: "Pha 400g Coc85 cho phuy 200L nước. Phun phòng trừ tán dưới sát mặt đất sau các đợt mưa kéo dài."
+        }
+      };
+
+      function updateDosageCalculation() {
+        const diseaseKey = document.getElementById("calc-disease-select").value;
+        const numTrees = parseInt(document.getElementById("calc-num-trees").value) || 200;
+        const tankSize = parseInt(document.getElementById("calc-tank-size").value) || 200;
+        const outputEl = document.getElementById("calc-output-text");
+
+        const data = DOSAGE_DATABASE[diseaseKey] || DOSAGE_DATABASE.footrot;
+        const totalWaterNeeded = Math.round(numTrees * data.waterPerTree);
+        const totalTanksNeeded = (totalWaterNeeded / tankSize).toFixed(1);
+        const medicinePerTank = Math.round(tankSize * data.ratePerLiter);
+        const totalMedicineNeeded = Math.round(totalWaterNeeded * data.ratePerLiter);
+
+        outputEl.innerHTML = `
+          <p><strong>💊 Thuốc đặc trị:</strong> <span class="text-pastel-greenDark font-bold">${data.medicine}</span></p>
+          <p><strong>💧 Nhu cầu nước:</strong> ~${totalWaterNeeded} Lít (~${totalTanksNeeded} bình/phuy ${tankSize}L) cho ${numTrees} trụ tiêu.</p>
+          <p><strong>⚖️ Liều lượng pha:</strong> <strong>${medicinePerTank} g (hoặc ml)</strong> thuốc cho mỗi bình/phuy ${tankSize}L (tỷ lệ ${data.ratePerLiter}g/L nước).</p>
+          <p><strong>📦 Tổng lượng thuốc:</strong> <strong>${totalMedicineNeeded} g (hoặc ml)</strong> cho toàn bộ ${numTrees} trụ tiêu.</p>
+          <p><strong>⏱️ Thời gian cách ly (PHI):</strong> ${data.phi}.</p>
+          <p class="text-[11px] text-zinc-500 mt-1 border-t border-pastel-border pt-1"><strong>📝 Hướng dẫn:</strong> ${data.instructions}</p>
+        `;
+      }
+
+      // Dosage Modal Toggles
+      const modalDosage = document.getElementById("modal-dosage");
+      if (document.getElementById("btn-open-dosage-modal")) {
+        document.getElementById("btn-open-dosage-modal").addEventListener("click", () => {
+          updateDosageCalculation();
+          modalDosage.classList.remove("hidden");
+          setTimeout(() => {
+            modalDosage.classList.remove("opacity-0");
+            modalDosage.firstElementChild.classList.remove("scale-95");
+          }, 10);
+        });
+      }
+
+      if (document.getElementById("btn-close-dosage-modal")) {
+        document.getElementById("btn-close-dosage-modal").addEventListener("click", () => {
+          modalDosage.classList.add("opacity-0");
+          modalDosage.firstElementChild.classList.add("scale-95");
+          setTimeout(() => modalDosage.classList.add("hidden"), 200);
+        });
+      }
+
+      if (document.getElementById("calc-disease-select")) {
+        document.getElementById("calc-disease-select").addEventListener("change", updateDosageCalculation);
+        document.getElementById("calc-num-trees").addEventListener("input", updateDosageCalculation);
+        document.getElementById("calc-tank-size").addEventListener("change", updateDosageCalculation);
+      }
+
+      if (document.getElementById("btn-apply-dosage")) {
+        document.getElementById("btn-apply-dosage").addEventListener("click", () => {
+          document.getElementById("btn-close-dosage-modal").click();
+          showToast("Đã lưu phác đồ pha thuốc vào sổ tay", "success");
+        });
+      }
+
+      // 4. Diagnostic Report Export & Print Modal
+      const modalReport = document.getElementById("modal-report");
+      if (document.getElementById("btn-export-report")) {
+        document.getElementById("btn-export-report").addEventListener("click", () => {
+          populateReportCard();
+          modalReport.classList.remove("hidden");
+          setTimeout(() => {
+            modalReport.classList.remove("opacity-0");
+            modalReport.firstElementChild.classList.remove("scale-95");
+          }, 10);
+        });
+      }
+
+      if (document.getElementById("btn-close-report-modal")) {
+        document.getElementById("btn-close-report-modal").addEventListener("click", () => {
+          modalReport.classList.add("opacity-0");
+          modalReport.firstElementChild.classList.add("scale-95");
+          setTimeout(() => modalReport.classList.add("hidden"), 200);
+        });
+      }
+
+      function populateReportCard() {
+        const now = new Date();
+        document.getElementById("report-timestamp").textContent = `Ngày khám: ${now.toLocaleDateString("vi-VN")} ${now.toLocaleTimeString("vi-VN")} | Máy phân tích AI: LeafyCare v2.0`;
+        
+        const total = currentDetections.length;
+        const healthy = currentDetections.filter(d => (d.stable_disease?.label || d.disease?.label || "").toLowerCase().includes("healthy")).length;
+        const diseased = total - healthy;
+
+        document.getElementById("report-total-leaves").textContent = total;
+        document.getElementById("report-healthy-leaves").textContent = healthy;
+        document.getElementById("report-diseased-leaves").textContent = diseased;
+
+        const tbody = document.getElementById("report-table-body");
+        const prescripBox = document.getElementById("report-prescriptions");
+        tbody.innerHTML = "";
+        prescripBox.innerHTML = "";
+
+        if (total === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-zinc-400">Chưa có dữ liệu quét lá</td></tr>`;
+          prescripBox.innerHTML = `<p class="text-zinc-500">Chưa có chẩn đoán cần xử lý.</p>`;
+          return;
+        }
+
+        const uniqueDiseases = new Set();
+        currentDetections.forEach((d, idx) => {
+          const id = d._assignedId || d.track_id || (idx + 1);
+          const rawLabel = d.stable_disease?.label || d.disease?.label || "healthy";
+          const label = formatLabel(rawLabel);
+          const conf = ((d.stable_disease?.confidence || d.disease?.confidence || 0) * 100).toFixed(0);
+          const isH = rawLabel.toLowerCase().includes("healthy");
+          if (!isH) uniqueDiseases.add(rawLabel.toLowerCase().replace(/_/g, " ").trim());
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="p-2.5 font-bold font-mono">#${id}</td>
+            <td class="p-2.5 font-semibold text-pastel-greenDark">${label}</td>
+            <td class="p-2.5 font-mono">${conf}%</td>
+            <td class="p-2.5">
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${isH ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                ${isH ? 'An toàn' : 'Cần điều trị'}
+              </span>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        if (uniqueDiseases.size === 0) {
+          prescripBox.innerHTML = `<p class="text-emerald-700 font-semibold">✅ Toàn bộ lá kiểm tra đều đạt chuẩn khỏe mạnh. Không cần phun thuốc hóa học. Tiếp tục duy trì chế độ phân bón hữu cơ và kiểm tra định kỳ 2 tuần/lần.</p>`;
+        } else {
+          uniqueDiseases.forEach(key => {
+            const remedy = REMEDIES[key];
+            if (remedy) {
+              const div = document.createElement("div");
+              div.className = "border-l-4 border-pastel-green pl-3";
+              div.innerHTML = `
+                <h5 class="font-bold text-pastel-greenDark text-xs">${remedy.title}:</h5>
+                <p class="text-[11px] text-zinc-600 mt-0.5">${remedy.remedy}</p>
+              `;
+              prescripBox.appendChild(div);
+            }
+          });
+        }
+      }
+
+      // Print Action
+      if (document.getElementById("btn-print-report-action")) {
+        document.getElementById("btn-print-report-action").addEventListener("click", () => {
+          window.print();
+        });
+      }
+
+      // Hook updateHealthMeter into renderReports
+
     </script>
+  
+    <!-- Modal 1: Smart Pesticide Dosage Calculator Modal -->
+    <div id="modal-dosage" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-300 hidden opacity-0">
+      <div class="bg-white border-4 border-pastel-border rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 transform scale-95 transition-all duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div class="flex justify-between items-center border-b-2 border-pastel-border pb-3">
+          <div class="flex items-center gap-2">
+            <div class="p-2 rounded-xl bg-amber-100 text-amber-800">
+              <i data-lucide="calculator" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-pastel-greenDark font-display">Máy Tính Liều Lượng Thuốc BVTV</h3>
+              <p class="text-[10px] text-zinc-500 font-medium">Phác đồ chuẩn Nông Nghiệp sạch cho Cây Hồ Tiêu</p>
+            </div>
+          </div>
+          <button id="btn-close-dosage-modal" class="p-2 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div class="flex flex-col gap-3.5">
+          <div>
+            <label class="text-xs font-bold text-zinc-700 block mb-1">1. Chọn Loại Bệnh Cần Điều Trị:</label>
+            <select id="calc-disease-select" class="w-full text-xs bg-pastel-cream border-2 border-pastel-border rounded-xl px-3 py-2.5 text-zinc-800 outline-none font-semibold focus:border-pastel-green cursor-pointer">
+              <option value="footrot">Bệnh Chết Nhanh (Thối Gốc Rễ - Nấm Phytophthora)</option>
+              <option value="slow_decline">Bệnh Chết Chậm (Tuyến Trùng & Nấm Vàng Lá)</option>
+              <option value="pollu_disease">Bệnh Thán Thư (Pollu - Đốm Lá & Rụng Quả)</option>
+              <option value="yellow_mottle_virus">Bệnh Khảm Vàng Lá Virus (Trừ Rầy Rệp Môi Giới)</option>
+              <option value="leaf_blight">Bệnh Cháy Lá / Đốm Khô Hoại Tử</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-bold text-zinc-700 block mb-1">2. Số Trụ Tiêu Vườn:</label>
+              <input type="number" id="calc-num-trees" value="200" min="1" step="10" class="w-full text-xs bg-pastel-cream border-2 border-pastel-border rounded-xl px-3 py-2 text-zinc-800 font-bold outline-none focus:border-pastel-green" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-zinc-700 block mb-1">Dung Tích Bình / Phuy:</label>
+              <select id="calc-tank-size" class="w-full text-xs bg-pastel-cream border-2 border-pastel-border rounded-xl px-3 py-2 text-zinc-800 font-semibold outline-none focus:border-pastel-green cursor-pointer">
+                <option value="16">Bình xịt 16 Lít</option>
+                <option value="25">Bình xịt 25 Lít</option>
+                <option value="200" selected>Phuy 200 Lít</option>
+                <option value="500">Bồn tưới 500 Lít</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Calculated Results Card -->
+          <div id="calc-result-box" class="bg-pastel-greenLight/60 border-2 border-pastel-border rounded-2xl p-4 flex flex-col gap-2 shadow-inner">
+            <h4 class="text-xs font-bold text-pastel-greenDark font-display flex items-center gap-1.5">
+              <i data-lucide="check-circle" class="w-4 h-4 text-pastel-green"></i> Phác Đồ Pha Thuốc Khuyến Nghị:
+            </h4>
+            <div id="calc-output-text" class="text-xs text-zinc-700 leading-relaxed space-y-1.5 font-medium">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-apply-dosage" class="w-full py-3 rounded-xl bg-pastel-green text-white font-bold text-xs cute-shadow-btn transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+          <i data-lucide="check" class="w-4 h-4"></i> Xác Nhận Phác Đồ Này
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal 2: Printable PDF / Image Health Certificate Report Modal -->
+    <div id="modal-report" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-300 hidden opacity-0">
+      <div class="bg-white border-4 border-pastel-border rounded-3xl max-w-2xl w-full p-6 shadow-2xl flex flex-col gap-4 transform scale-95 transition-all duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar" id="printable-report-card">
+        <div class="flex justify-between items-center border-b-2 border-pastel-border pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 rounded-xl bg-pastel-green text-white">
+              <i data-lucide="leaf" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-pastel-greenDark font-display">PHIẾU KHÁM BỆNH HỒ TIÊU (AI DIAGNOSTIC REPORT)</h3>
+              <p class="text-[10px] text-zinc-500 font-medium" id="report-timestamp">Ngày khám: - | Mã phiên: -</p>
+            </div>
+          </div>
+          <button id="btn-close-report-modal" class="p-2 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <!-- Printable Body Content -->
+        <div class="flex flex-col gap-4">
+          <!-- Summary Cards Grid -->
+          <div class="grid grid-cols-3 gap-3">
+            <div class="p-3 rounded-2xl bg-pastel-cream border-2 border-pastel-border text-center">
+              <span class="text-[9px] text-zinc-500 font-bold uppercase block">Tổng Số Lá</span>
+              <span id="report-total-leaves" class="text-lg font-bold text-pastel-greenDark font-mono">0</span>
+            </div>
+            <div class="p-3 rounded-2xl bg-emerald-50 border-2 border-emerald-200 text-center">
+              <span class="text-[9px] text-emerald-700 font-bold uppercase block">Lá Khỏe Mạnh</span>
+              <span id="report-healthy-leaves" class="text-lg font-bold text-emerald-800 font-mono">0</span>
+            </div>
+            <div class="p-3 rounded-2xl bg-rose-50 border-2 border-rose-200 text-center">
+              <span class="text-[9px] text-rose-700 font-bold uppercase block">Lá Nhiễm Bệnh</span>
+              <span id="report-diseased-leaves" class="text-lg font-bold text-rose-800 font-mono">0</span>
+            </div>
+          </div>
+
+          <!-- Per-Leaf Findings Table -->
+          <div>
+            <h4 class="text-xs font-bold text-pastel-greenDark font-display uppercase tracking-wider mb-2">Chi Tiết Từng Chiếc Lá:</h4>
+            <div class="border-2 border-pastel-border rounded-2xl overflow-hidden">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-pastel-cream text-zinc-700 font-bold text-[11px] border-b-2 border-pastel-border">
+                  <tr>
+                    <th class="p-2.5">ID Lá</th>
+                    <th class="p-2.5">Chẩn Đoán Bệnh</th>
+                    <th class="p-2.5">Độ Tin Cậy</th>
+                    <th class="p-2.5">Mức Độ</th>
+                  </tr>
+                </thead>
+                <tbody id="report-table-body" class="divide-y divide-pastel-border bg-white text-zinc-700">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Prescribed Treatment Advice -->
+          <div class="p-4 rounded-2xl bg-pastel-greenLight/50 border-2 border-pastel-border">
+            <h4 class="text-xs font-bold text-pastel-greenDark font-display uppercase tracking-wider mb-1.5">Phác Đồ & Khuyến Nghị Nông Học:</h4>
+            <div id="report-prescriptions" class="text-xs text-zinc-700 leading-relaxed space-y-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3 pt-2 border-t-2 border-pastel-border">
+          <button id="btn-print-report-action" class="flex-1 py-3 rounded-xl bg-pastel-green text-white font-bold text-xs cute-shadow-btn transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+            <i data-lucide="printer" class="w-4 h-4"></i> In Phiếu Khám / Lưu PDF
+          </button>
+        </div>
+      </div>
+    </div>
+
   </body>
 </html>
