@@ -11,13 +11,13 @@ TRACKERS_DIR = API_DIR / "trackers"
 
 
 def default_detector_path() -> Path:
-    """Prefer the new one-class detector while keeping legacy deployments bootable."""
+    """Prefer the leaf segmentation model."""
     configured = os.getenv("LEAF_DETECTOR_PATH")
     if configured:
         return Path(configured)
+    seg_path = MODELS_DIR / "leaf_detector_yolo26n_seg.pt"
     detect_path = MODELS_DIR / "leaf_detector_yolo26n_detect.pt"
-    legacy_path = MODELS_DIR / "leaf_detector_yolo26n_seg.pt"
-    return detect_path if detect_path.is_file() else legacy_path
+    return seg_path if seg_path.is_file() else detect_path
 
 
 @dataclass(frozen=True)
