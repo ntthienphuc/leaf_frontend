@@ -1126,8 +1126,8 @@
           lastLeafDetectedTime = Date.now();
           hasSentAutoReset = false;
         } else {
-          // If no leaves detected for >= 2.0s (2000ms), auto clear tracker & cards
-          if (Date.now() - lastLeafDetectedTime >= 2000) {
+          // If no leaves detected for >= 1.0s (1000ms), auto clear tracker & cards
+          if (Date.now() - lastLeafDetectedTime >= 1000) {
             if (!hasSentAutoReset) {
               hasSentAutoReset = true;
               if (ws && ws.readyState === WebSocket.OPEN) {
