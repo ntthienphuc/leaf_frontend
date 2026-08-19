@@ -2,24 +2,52 @@
 .venv/
 venv/
 ENV/
+env/
 
 # Python cache and bytecode
 __pycache__/
 *.py[cod]
-*.class
+*$py.class
 
-# Temporary archives, notebooks, datasets, and test artifacts
-temp/
-*.log
-data/
-leavesbank_yolo26n_detect_results/
+# Raw datasets and heavy archives
+data/raw/
+data/external/
+data/prepared/
 *.zip
+*.tar.gz
+*.rar
+
+# Exclude notebooks and PowerShell scripts
 *.ipynb
-scripts/
+*.ps1
 leaf_local.py
 requirements-local.txt
-setup_leaf_local.ps1
 watch_leaf_train.ps1
+setup_leaf_local.ps1
+
+# Ignore ad-hoc temporary scripts
+scripts/*
+!scripts/prepare_leavesbank_seg.py
+!scripts/prepare_leavesbank_detect.py
+!scripts/prepare_black_pepper_classifier.py
+!scripts/prep_all_data_server.py
+!scripts/train_yolo26_leaf_seg.py
+!scripts/train_yolo26_leaf_detect.py
+!scripts/train_2stage_server.py
+!scripts/test_real_images.py
+!scripts/test_concurrency.py
+
+# Training runs & local test artifacts
+temp/
+*.log
+yolo26_leaf_seg_runs/
+runs/
+experiments/
+leavesbank_yolo26n_detect_results/
+
+# Exclude standalone models exceeding GitHub 100MB limit
+*.pth
+*.onnx
 
 # IDE and OS configurations
 .vscode/
@@ -29,4 +57,3 @@ Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
-yolo26_leaf_seg_runs/
