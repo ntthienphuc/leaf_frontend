@@ -940,6 +940,208 @@
         }
       };
 
+      
+      // Connection Status layout updates
+      function updateConnectionStatus(status) {
+        if (!statusDot || !statusBadge || !statusText) return;
+        statusDot.className = "h-2.5 w-2.5 rounded-full";
+        statusBadge.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 text-xs font-bold transition-all duration-300";
+        
+        switch (status) {
+          case "connected":
+            statusDot.classList.add("bg-pastel-green", "status-pulse-connected");
+            statusBadge.classList.add("bg-pastel-greenLight", "text-pastel-greenDark", "border-pastel-border");
+            statusText.textContent = "Live Stream Connected";
+            break;
+          case "connecting":
+            statusDot.classList.add("bg-amber-400", "animate-pulse");
+            statusBadge.classList.add("bg-amber-50/80", "text-amber-700", "border-amber-200");
+            statusText.textContent = "Connecting...";
+            break;
+          case "disconnected":
+          default:
+            statusDot.classList.add("bg-rose-400");
+            statusBadge.classList.add("bg-rose-50", "text-rose-700", "border-rose-200");
+            statusText.textContent = "Offline";
+            break;
+        }
+      }
+
+      // Backend status checker
+      async function fetchBackendMetadata() {
+        const wsUrl = inputWsUrl.value;
+        localStorage.setItem("leafsense_ws_url", wsUrl);
+        const httpUrl = getHttpUrl(wsUrl);
+        
+        try {
+          const response = await fetch(`${httpUrl}/health`);
+          if (response.ok) {
+            const data = await response.json();
+            backendDevice.textContent = data.device || "cpu";
+          }
+        } catch (err) {
+          backendDevice.textContent = "unknown";
+        }
+      }
+
+      function getHttpUrl(wsUrl) {
+        if (window.location.origin && window.location.origin !== "null" && window.location.protocol.startsWith("http")) {
+          if (!wsUrl || wsUrl.includes(window.location.host) || !wsUrl.startsWith("http")) {
+            return window.location.origin;
+          }
+        }
+        if (!wsUrl) return window.location.origin || "";
+        return wsUrl
+          .replace(/^wss:\/\//i, "https://")
+          .replace(/^ws:\/\//i, "http://")
+          .replace(/\/ws\/detect\/?$/, "")
+          .replace(/\/detect\/?$/, "")
+          .replace(/\/ws\/?$/, "")
+          .replace(/\/+$/, "");
+      }
+
+      // Send WebSocket configuration (confidence thresholds)
+      function sendWsConfig() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        const detConf = parseFloat(sliderDetectorConf.value) / 100.0;
+        const clsConf = parseFloat(sliderClassifierConf.value) / 100.0;
+        ws.send(JSON.stringify({
+          type: "config",
+          detector_conf: detConf,
+          classifier_conf: clsConf
+        }));
+      }
+
+      // Connect WebSocket
+      function connectWebSocket() {
+        if (ws) {
+          try { ws.close(); } catch (e) {}
+        }
+
+        const url = inputWsUrl.value.trim();
+        updateConnectionStatus("connecting");
+        
+        try {
+          ws = new WebSocket(url);
+          ws.binaryType = "arraybuffer";
+
+          ws.onopen = () => {
+            updateConnectionStatus("connected");
+            showToast("Đã kết nối luồng AI thời gian thực", "success");
+            fetchBackendMetadata();
+            sendWsConfig();
+            
+            if (isStreaming && currentMode === 'realtime') {
+              sendNextFrame();
+            }
+          };
+
+          ws.onmessage = (event) => {
+            isProcessingFrame = false;
+            try {
+              const result = JSON.parse(event.data);
+              if (result.type === "reset") {
+                showToast("Tracker memory cleared", "success");
+                return;
+              }
+              processDetections(result);
+            } catch (e) {
+              console.error("Parse error:", e);
+            }
+          };
+
+          ws.onclose = () => {
+            updateConnectionStatus("disconnected");
+            isProcessingFrame = false;
+            if (isStreaming && currentMode === 'realtime') {
+              setTimeout(connectWebSocket, 3000);
+            }
+          };
+
+          ws.onerror = (err) => {
+            updateConnectionStatus("disconnected");
+            console.warn("WebSocket error:", err);
+          };
+        } catch (err) {
+          console.error("WebSocket init error:", err);
+          updateConnectionStatus("disconnected");
+        }
+      }
+
+      // Send next video frame over WebSocket
+      function sendNextFrame() {
+        if (!isStreaming || currentMode !== 'realtime' || !ws || ws.readyState !== WebSocket.OPEN || isProcessingFrame) {
+          return;
+        }
+
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+          requestAnimationFrame(sendNextFrame);
+          return;
+        }
+
+        isProcessingFrame = true;
+        lastFrameSentTime = performance.now();
+
+        // Scale down resolution if requested
+        const targetRes = selectResolution.value;
+        let scale = 1.0;
+        if (targetRes === "480p" && video.videoHeight > 480) scale = 480 / video.videoHeight;
+        else if (targetRes === "360p" && video.videoHeight > 360) scale = 360 / video.videoHeight;
+
+        captureCanvas.width = Math.round(video.videoWidth * scale);
+        captureCanvas.height = Math.round(video.videoHeight * scale);
+
+        const capCtx = captureCanvas.getContext("2d");
+        capCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+        const quality = parseInt(sliderQuality.value) / 100.0;
+        captureCanvas.toBlob(
+          (blob) => {
+            if (blob && ws && ws.readyState === WebSocket.OPEN) {
+              lastCaptureBlob = blob;
+              payloadSizeCount += blob.size;
+              cardPayload.textContent = `${(blob.size / 1024).toFixed(1)} KB`;
+              blob.arrayBuffer().then((buffer) => ws.send(buffer));
+            } else {
+              isProcessingFrame = false;
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      }
+
+      // Process WebSocket Detections
+      function processDetections(result) {
+        const detections = result.detections || [];
+        cardTargets.textContent = detections.length;
+        trackedCounter.textContent = `${detections.length} Lá`;
+
+        currentDetections = detections.map((det, idx) => ({
+          ...det,
+          _assignedId: det.track_id !== null && det.track_id !== undefined ? det.track_id : `leaf-${idx + 1}`,
+          originalFrameSize: result.frame
+        }));
+
+        if (detections.length > 0 && lastCaptureBlob) {
+          if (lastCaptureObjectUrl) URL.revokeObjectURL(lastCaptureObjectUrl);
+          lastCaptureObjectUrl = URL.createObjectURL(lastCaptureBlob);
+          frameImageObj.onload = () => updateTrackedCardContainer(currentDetections);
+          frameImageObj.src = lastCaptureObjectUrl;
+        } else {
+          updateTrackedCardContainer([]);
+        }
+
+        const elapsed = performance.now() - lastFrameSentTime;
+        const targetDelay = 1000 / targetFrameRate;
+        const remainingDelay = Math.max(0, targetDelay - elapsed);
+        
+        setTimeout(() => {
+          isProcessingFrame = false;
+          sendNextFrame();
+        }, remainingDelay);
+      }
+
       // Multi-layer Resilient Camera Stream Starter
       async function startCamera() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
