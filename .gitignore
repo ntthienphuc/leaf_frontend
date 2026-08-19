@@ -25,14 +25,12 @@ requirements-local.txt
 watch_leaf_train.ps1
 setup_leaf_local.ps1
 
-# Ignore ad-hoc temporary scripts
+# Ignore all scripts except pure Segmentation and Classifier 2-Phase pipeline
 scripts/*
 !scripts/prepare_leavesbank_seg.py
-!scripts/prepare_leavesbank_detect.py
 !scripts/prepare_black_pepper_classifier.py
 !scripts/prep_all_data_server.py
 !scripts/train_yolo26_leaf_seg.py
-!scripts/train_yolo26_leaf_detect.py
 !scripts/train_2stage_server.py
 !scripts/test_real_images.py
 !scripts/test_concurrency.py
