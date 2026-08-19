@@ -1073,10 +1073,19 @@
       }
 
       function getHttpUrl(wsUrl) {
+        if (window.location.origin && window.location.origin !== "null" && window.location.protocol.startsWith("http")) {
+          if (!wsUrl || wsUrl.includes(window.location.host) || !wsUrl.startsWith("http")) {
+            return window.location.origin;
+          }
+        }
+        if (!wsUrl) return window.location.origin || "";
         return wsUrl
           .replace(/^wss:\/\//i, "https://")
           .replace(/^ws:\/\//i, "http://")
-          .replace(/\/detect\/?$/, ""); // Removes /detect from the end
+          .replace(/\/ws\/detect\/?$/, "")
+          .replace(/\/detect\/?$/, "")
+          .replace(/\/ws\/?$/, "")
+          .replace(/\/+$/, "");
       }
 
       // Connect WebSocket
@@ -1404,6 +1413,60 @@
           ctx.fillText(text, tagX + padH, tagY + padV + (fontSize / 2));
           ctx.restore();
         });
+      }
+
+      
+      // Process REST Static Predictions (Modes 2 & 3: Snapshot & Upload)
+      function processStaticPredictions(result) {
+        loadingOverlay.classList.add("hidden");
+        
+        const detections = result.detections || [];
+        cardTargets.textContent = detections.length;
+        trackedCounter.textContent = `${detections.length} Lá`;
+        cardLatency.textContent = "-";
+
+        currentDetections = detections.map((det, idx) => ({
+          ...det,
+          _assignedId: det.track_id !== null && det.track_id !== undefined ? det.track_id : `leaf-${idx + 1}`,
+          originalFrameSize: result.frame
+        }));
+
+        // Draw results on overlay canvas
+        const ctx = overlay.getContext("2d");
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        if (frameImageObj && frameImageObj.complete && frameImageObj.naturalWidth > 0) {
+          ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
+        }
+        drawBoundingBoxes(ctx);
+
+        // Clear and rebuild cards
+        trackedTargets.clear();
+        const targetList = document.getElementById("target-list");
+        targetList.innerHTML = "";
+        
+        if (currentDetections.length === 0) {
+          targetList.innerHTML = `
+            <div id="target-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-400">
+              <div class="w-12 h-12 rounded-full border border-dashed border-pastel-border flex items-center justify-center mb-4">
+                <i data-lucide="scan-line" class="w-6 h-6 text-zinc-300"></i>
+              </div>
+              <p class="text-sm font-bold text-zinc-500 font-display">Không phát hiện lá cây</p>
+              <p class="text-xs text-zinc-400 max-w-[200px] mt-1.5 leading-relaxed">Hãy thử chọn ảnh chụp gần hơn hoặc rõ nét hơn.</p>
+            </div>
+          `;
+        } else {
+          updateTrackedCardContainer(currentDetections);
+        }
+        
+        if (typeof updateHealthMeter === "function") {
+          updateHealthMeter(currentDetections);
+        }
+        if (typeof renderReports === "function") {
+          renderReports(currentDetections);
+        }
+        if (window.lucide) {
+          lucide.createIcons();
+        }
       }
 
       function generateCropDataUrl(det) {
@@ -1919,31 +1982,32 @@
 
       // Upload and analyze file
       async function handleUploadedFile(file) {
-        if (!file.type.match("image.*")) {
-          showToast("Unsupported file: please select a JPEG or PNG image", "error");
+        if (!file || !file.type.match("image.*")) {
+          showToast("Vui lòng chọn file ảnh định dạng JPG, PNG hoặc WebP", "error");
           return;
         }
 
         clearDetections();
         loadingOverlay.classList.remove("hidden");
         
-        // Show local preview by loading it as Image object
+        // Hide upload dropzone so canvas is displayed cleanly
+        uploadContainer.classList.add("hidden");
+        btnClearUpload.classList.remove("hidden");
+        
         const reader = new FileReader();
         reader.onload = (event) => {
-          const img = new Image();
-          img.onload = () => {
-            overlay.width = img.width;
-            overlay.height = img.height;
+          frameImageObj = new Image();
+          frameImageObj.onload = () => {
+            overlay.width = frameImageObj.naturalWidth || frameImageObj.width;
+            overlay.height = frameImageObj.naturalHeight || frameImageObj.height;
             const ctx = overlay.getContext("2d");
-            ctx.drawImage(img, 0, 0);
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+            ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
             
-            // Expose image coordinates for sidebar crops
-            frameImageObj.src = img.src;
-            
-            // Trigger REST call to endpoint
+            // Send to backend for AI inference
             uploadAndAnalyzeBlob(file);
           };
-          img.src = event.target.result;
+          frameImageObj.src = event.target.result;
         };
         reader.readAsDataURL(file);
       }
@@ -1956,34 +2020,42 @@
         try {
           const detConfVal = parseFloat(sliderDetectorConf.value) / 100.0;
           const clsConfVal = parseFloat(sliderClassifierConf.value) / 100.0;
-          const response = await fetch(`${httpUrl}/predict/image?tracker=false&detector_conf=${detConfVal}&classifier_conf=${clsConfVal}`, {
+          const targetEndpoint = `${httpUrl}/predict/image?tracker=false&detector_conf=${detConfVal}&classifier_conf=${clsConfVal}`;
+          
+          console.log("Sending prediction request to:", targetEndpoint);
+          const response = await fetch(targetEndpoint, {
             method: "POST",
             body: formData
           });
 
           if (response.ok) {
             const data = await response.json();
+            console.log("Prediction result:", data);
             processStaticPredictions(data);
             
             uploadContainer.classList.add("hidden");
             btnClearUpload.classList.remove("hidden");
-            showToast("Uploaded leaf analyzed successfully!", "success");
+            const count = data.detections ? data.detections.length : 0;
+            showToast(`Đã phân tích xong: phát hiện ${count} lá!`, "success");
           } else {
-            throw new Error("HTTP prediction failed: status " + response.status);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
         } catch (err) {
           loadingOverlay.classList.add("hidden");
-          showToast("Inference failed: check backend API connection", "error");
-          console.error(err);
+          showToast(`Lỗi kết nối API: ${err.message}`, "error");
+          console.error("Upload inference error:", err);
+          uploadContainer.classList.remove("hidden");
         }
       }
 
-      // Mode 3: Clear Upload
       btnClearUpload.onclick = () => {
         clearDetections();
+        const ctx = overlay.getContext("2d");
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
         uploadContainer.classList.remove("hidden");
         btnClearUpload.classList.add("hidden");
         fileInput.value = "";
+        showToast("Đã xóa ảnh đang chẩn đoán");
       };
 
       // Snap snapshot frame screenshot of overlay canvas
