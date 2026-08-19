@@ -12,8 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 import os
 
-from core.config import settings
-from core.pipeline import LeafDiseasePipeline
+try:`r`n    from core.config import settings`r`n    from core.pipeline import LeafDiseasePipeline`r`nexcept ImportError:`r`n    from backend.core.config import settings`r`n    from backend.core.pipeline import LeafDiseasePipeline
 
 
 app = FastAPI(title="Leaf Disease Real-Time API", version="0.1.0")
@@ -219,3 +218,4 @@ for path in [
     if os.path.exists(path):
         app.mount("/", StaticFiles(directory=path), name="frontend")
         break
+
