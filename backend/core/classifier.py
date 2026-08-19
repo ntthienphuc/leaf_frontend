@@ -21,9 +21,9 @@ class DiseaseClassifier:
 
         self.model_name = checkpoint.get("model_name", "efficientnet_v2_s")
         self.class_names = list(checkpoint["class_names"])
-        self.image_size = int(checkpoint.get("img_size", image_size))
+        self.image_size = int(checkpoint.get("image_size", checkpoint.get("img_size", image_size)))
         self.model = self._build_model(self.model_name, len(self.class_names))
-        self.model.load_state_dict(checkpoint["model_state"])
+        self.model.load_state_dict(checkpoint.get("state_dict", checkpoint.get("model_state")))
         self.model.to(self.device)
         self.model.eval()
 
@@ -81,3 +81,4 @@ class DiseaseClassifier:
                 for i, class_name in enumerate(self.class_names)
             },
         }
+
