@@ -12,7 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 import os
 
-try:`r`n    from core.config import settings`r`n    from core.pipeline import LeafDiseasePipeline`r`nexcept ImportError:`r`n    from backend.core.config import settings`r`n    from backend.core.pipeline import LeafDiseasePipeline
+try:
+    from core.config import settings
+    from core.pipeline import LeafDiseasePipeline
+except ImportError:
+    from backend.core.config import settings
+    from backend.core.pipeline import LeafDiseasePipeline
 
 
 app = FastAPI(title="Leaf Disease Real-Time API", version="0.1.0")
