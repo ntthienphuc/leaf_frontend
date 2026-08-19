@@ -610,7 +610,9 @@
 
     <!-- Frontend Script Logic -->
     <script>
-      // DOM Elements
+      // ==========================================
+      // DOM Elements & Core Variables
+      // ==========================================
       const video = document.getElementById("video");
       const overlay = document.getElementById("overlay");
       const captureCanvas = document.getElementById("hidden-capture");
@@ -618,20 +620,20 @@
       const uploadContainer = document.getElementById("upload-container");
       const loadingOverlay = document.getElementById("loading-overlay");
       const fileInput = document.getElementById("file-input");
-      
+
       const btnStartOverlay = document.getElementById("btn-start-overlay");
       const btnStreamToggle = document.getElementById("btn-stream-toggle");
       const iconStreamPlay = document.getElementById("icon-stream-play");
       const iconStreamStop = document.getElementById("icon-stream-stop");
       const btnResetTracker = document.getElementById("btn-reset-tracker");
       const btnSnapshot = document.getElementById("btn-snapshot");
-      
+
       const btnCaptureAction = document.getElementById("btn-capture-action");
       const btnRetakeAction = document.getElementById("btn-retake-action");
       const btnClearUpload = document.getElementById("btn-clear-upload");
       const btnBrowseFile = document.getElementById("btn-browse-file");
       const btnDemoFile = document.getElementById("btn-demo-file");
-      
+
       const selectCamera = document.getElementById("select-camera");
       const selectResolution = document.getElementById("select-resolution");
       const sliderQuality = document.getElementById("slider-quality");
@@ -641,307 +643,275 @@
       const sliderClassifierConf = document.getElementById("slider-classifier-conf");
       const labelClassifierConf = document.getElementById("label-classifier-conf");
       const inputWsUrl = document.getElementById("input-ws-url");
-      
+
       const statusBadge = document.getElementById("status-badge");
       const statusDot = document.getElementById("status-dot");
       const statusText = document.getElementById("status-text");
       const backendDevice = document.getElementById("backend-device");
-      
+
       const statLatency = document.getElementById("stat-latency");
       const statFps = document.getElementById("stat-fps");
       const statResolution = document.getElementById("stat-resolution");
-      
+
       const cardLatency = document.getElementById("card-latency");
       const cardFps = document.getElementById("card-fps");
       const cardPayload = document.getElementById("card-payload");
       const cardTargets = document.getElementById("card-targets");
       const trackedCounter = document.getElementById("tracked-counter");
       const targetList = document.getElementById("target-list");
-      const targetEmptyState = document.getElementById("target-empty-state");
-      
-      const btnFlipCamera = document.getElementById("btn-flip-camera");
-        const btnToggleTorch = document.getElementById("btn-toggle-torch");
-        const btnFreezeHud = document.getElementById("btn-freeze-hud");
-        const btnToggleHaptic = document.getElementById("btn-toggle-haptic");
-        const btnQuickSummaryPill = document.getElementById("btn-quick-summary-pill");
-        const quickSummaryText = document.getElementById("quick-summary-text");
-        
-        let currentFacingMode = "environment";
-        let isTorchOn = false;
-        let isHudFrozen = false;
-        let isHapticEnabled = true;
-        let lastDetectedCount = 0;
-        let lastTrackIds = new Set();
-        
-        const btnTheaterToggle = document.getElementById("btn-theater-toggle");
-      const iconTheaterExpand = document.getElementById("icon-theater-expand");
-      const iconTheaterCollapse = document.getElementById("icon-theater-collapse");
-      const leftPanel = document.getElementById("left-panel");
-      const rightPanel = document.getElementById("right-panel");
-      const viewportContainer = document.getElementById("viewport-container");
-      const viewportBox = document.getElementById("viewport-box");
-      let isTheaterMode = false;
 
       // App State
       let currentMode = 'realtime'; // 'realtime' | 'snapshot' | 'upload'
+      let currentFacingMode = 'environment';
       let ws = null;
       let stream = null;
       let isStreaming = false;
+      let isDrawing = false;
       let isProcessingFrame = false;
       let targetFrameRate = 15;
-      
-      // Performance Metrics
+      let frameWatchdogTimer = null;
       let lastFrameSentTime = 0;
       let frameTimestamps = [];
-      let payloadSizeSum = 0;
-      let payloadSizeCount = 0;
-      
-      // Keep track of latest frame image to crop tracked items in browser
+      let currentDetections = [];
+      let trackedTargets = new Map();
       let frameImageObj = new Image();
       let lastCaptureBlob = null;
       let lastCaptureObjectUrl = null;
-      let isDrawing = false;
-      let staticUploadedFile = null;
 
-      // Tracked Object Crops store (track_id -> { elementId, lastSeenTimestamp, cardElement })
-      const trackedTargets = new Map();
-      const TRACK_EXPIRY_MS = 2500; // Expire cards after 2.5 seconds in realtime mode
-
-      // Load Saved Settings
-      let savedWsUrl = localStorage.getItem("leafsense_ws_url");
-      
-      // Safety check: if running on production but configured to localhost, force reset to production HF Space
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        if (!savedWsUrl || savedWsUrl.includes("localhost") || savedWsUrl.includes("127.0.0.1")) {
-          savedWsUrl = "wss://thienphuc12339-leaf.hf.space/ws/detect";
-          localStorage.setItem("leafsense_ws_url", savedWsUrl);
-        }
-      }
-      
-      if (savedWsUrl) {
-        inputWsUrl.value = savedWsUrl;
-      } else {
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          inputWsUrl.value = `ws://${window.location.host}/ws/detect`;
-        } else {
-          inputWsUrl.value = "wss://thienphuc12339-leaf.hf.space/ws/detect";
-        }
-      }
-      const savedQuality = localStorage.getItem("leafsense_quality");
-      if (savedQuality) {
-        sliderQuality.value = savedQuality;
-        labelQuality.textContent = `${savedQuality}%`;
-      }
-      const savedRes = localStorage.getItem("leafsense_resolution");
-      if (savedRes) selectResolution.value = savedRes;
-
-      const savedDetectorConf = localStorage.getItem("leafsense_detector_conf_v2") || "45";
-      sliderDetectorConf.value = savedDetectorConf;
-      labelDetectorConf.textContent = `${savedDetectorConf}%`;
-
-      const savedClassifierConf = localStorage.getItem("leafsense_classifier_conf") || "35";
-      sliderClassifierConf.value = savedClassifierConf;
-      labelClassifierConf.textContent = `${savedClassifierConf}%`;
-
-      // Unified Focus/Theater Mode Toggle Handler
-      function toggleTheaterMode() {
-        isTheaterMode = !isTheaterMode;
-        if (isTheaterMode) {
-          viewportContainer.className = "fixed inset-0 z-50 w-screen h-screen bg-pastel-bg flex flex-col border-0 rounded-none transition-all duration-300";
-          viewportBox.className = "flex-1 w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border";
-          rightPanel.className = "fixed right-4 top-20 bottom-4 w-[340px] sm:w-[380px] z-50 bg-white/95 border-4 border-pastel-border rounded-3xl flex flex-col shadow-2xl transition-all duration-300 pointer-events-auto";
-          
-          iconTheaterExpand.classList.add("hidden");
-          iconTheaterCollapse.classList.remove("hidden");
-          showToast("Immersive view enabled", "success");
-        } else {
-          viewportContainer.className = "bg-white border-y-4 sm:border-4 border-pastel-border rounded-none sm:rounded-3xl -mx-4 sm:mx-0 overflow-hidden cute-shadow flex flex-col transition-all duration-300 relative";
-          viewportBox.className = "w-full relative bg-zinc-50 flex items-center justify-center overflow-hidden border-b-4 border-pastel-border h-[60vh] xs:h-[65vh] sm:h-[70vh] md:h-auto md:aspect-video transition-all duration-300";
-          rightPanel.className = "lg:col-span-4 flex flex-col gap-6 transition-all duration-300";
-          
-          iconTheaterCollapse.classList.add("hidden");
-          iconTheaterExpand.classList.remove("hidden");
-          showToast("Immersive view disabled");
-        }
-        
-        // Force canvas resize calculations on next tick
-        setTimeout(() => {
-          if (video.videoWidth) {
-            overlay.width = video.videoWidth;
-            overlay.height = video.videoHeight;
-          }
-        }, 100);
-      }
-
-      btnTheaterToggle.onclick = toggleTheaterMode;
-
-      // Initialize Lucide Icons
-      lucide.createIcons();
-
-      // Mode Selection Router
-      function switchMode(mode) {
-        if (mode === currentMode) return;
-        currentMode = mode;
-        showToast(`Switched to ${formatLabel(mode)} mode`);
-
-        if (mode !== 'realtime' && viewportContainer) {
-          viewportContainer.classList.remove("scanning-live");
-        }
-
-        // Update button active state colors (Light Cute Style)
-        ['realtime', 'snapshot', 'upload'].forEach(m => {
-          const btn = document.getElementById(`btn-mode-${m}`);
-          btn.className = "flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent text-zinc-650 hover:text-zinc-850 hover:bg-zinc-50 select-none cursor-pointer whitespace-nowrap";
-        });
-        const activeBtn = document.getElementById(`btn-mode-${mode}`);
-        activeBtn.className = "flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent mode-pill-active select-none cursor-pointer whitespace-nowrap";
-
-        // Toggle Control panels
-        document.getElementById("controls-realtime").className = mode === 'realtime' ? 'flex items-center gap-3' : 'hidden';
-        document.getElementById("controls-snapshot").className = mode === 'snapshot' ? 'flex items-center gap-3' : 'hidden';
-        document.getElementById("controls-upload").className = mode === 'upload' ? 'flex items-center gap-3' : 'hidden';
-
-        // Toggle Settings containers visibility
-        document.getElementById("camera-selector-container").className = mode !== 'upload' ? 'flex flex-col gap-1.5' : 'hidden';
-        document.getElementById("resolution-selector-container").className = mode !== 'upload' ? 'flex flex-col gap-1.5' : 'hidden';
-        document.getElementById("floating-hud").className = mode === 'realtime' ? 'absolute top-4 left-4 flex flex-col gap-1.5 pointer-events-none transition-all duration-300 select-none' : 'hidden';
-
-        // Initialize mode conditions
-        clearDetections();
-        
-        const mobileDock = document.getElementById("mobile-quick-dock");
-          const btnGrid = document.getElementById("btn-grid-toggle");
-          const btnSnapshotDownload = document.getElementById("btn-snapshot");
-
-          if (mode === 'realtime') {
-            if (mobileDock) mobileDock.classList.remove("hidden");
-            if (btnGrid) btnGrid.classList.remove("hidden");
-            if (btnSnapshotDownload) btnSnapshotDownload.classList.remove("hidden");
-            
-            uploadContainer.classList.add("hidden");
-            startOverlay.classList.remove("hidden");
-            btnRetakeAction.classList.add("hidden");
-            btnCaptureAction.classList.remove("hidden");
-            
-            if (isStreaming) {
-              startOverlay.classList.add("hidden");
-              connectWebSocket();
-            } else {
-              startCamera();
-            }
-          } else if (mode === 'snapshot') {
-            if (mobileDock) mobileDock.classList.remove("hidden");
-            if (btnGrid) btnGrid.classList.remove("hidden");
-            if (btnSnapshotDownload) btnSnapshotDownload.classList.remove("hidden");
-
-            if (ws) ws.close();
-            uploadContainer.classList.add("hidden");
-            startOverlay.classList.remove("hidden");
-            btnRetakeAction.classList.add("hidden");
-            btnCaptureAction.classList.remove("hidden");
-
-            if (isStreaming) {
-              startOverlay.classList.add("hidden");
-              isDrawing = true;
-              requestAnimationFrame(renderLoop);
-            } else {
-              startCamera();
-            }
-          } else if (mode === 'upload') {
-            if (mobileDock) mobileDock.classList.add("hidden");
-            if (btnGrid) btnGrid.classList.add("hidden");
-            if (btnSnapshotDownload) btnSnapshotDownload.classList.add("hidden");
-
-            if (ws) ws.close();
-            stopCamera();
-            
-            startOverlay.classList.add("hidden");
-            const ctx = overlay.getContext("2d");
-            ctx.clearRect(0, 0, overlay.width, overlay.height);
-            
-            uploadContainer.classList.remove("hidden");
-            btnClearUpload.classList.add("hidden");
-          }
-      }
-
-      // Show toast notifications
-      function showToast(message, type = "info") {
-        const toast = document.getElementById("toast");
-        const icon = document.getElementById("toast-icon");
-        const msgSpan = document.getElementById("toast-message");
-        
-        msgSpan.textContent = message;
-        icon.className = "w-5 h-5";
-        
-        if (type === "success") {
-          icon.classList.add("text-pastel-green");
-          icon.setAttribute("data-lucide", "check-circle-2");
-        } else if (type === "error") {
-          icon.classList.add("text-rose-500");
-          icon.setAttribute("data-lucide", "alert-triangle");
-        } else {
-          icon.classList.add("text-cyan-500");
-          icon.setAttribute("data-lucide", "info");
-        }
-        
-        lucide.createIcons({ attrs: { class: icon.className } });
-        
-        toast.classList.remove("translate-y-24", "opacity-0");
-        toast.classList.add("translate-y-0", "opacity-100");
-        
-        setTimeout(() => {
-          toast.classList.add("translate-y-24", "opacity-0");
-          toast.classList.remove("translate-y-0", "opacity-100");
-        }, 3000);
-      }
-
-      // Safe Camera Devices Enumeration
-      async function setupCameraSelection() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-          selectCamera.innerHTML = '<option value="">Camera API unsupported</option>';
-          return;
-        }
-
-        try {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const videoDevices = devices.filter(device => device.kind === "videoinput");
-          
-          selectCamera.innerHTML = "";
-          if (videoDevices.length === 0) {
-            selectCamera.innerHTML = '<option value="">Default Camera</option>';
-            return;
-          }
-
-          videoDevices.forEach((device, index) => {
-            const option = document.createElement("option");
-            option.value = device.deviceId;
-            option.textContent = device.label || `Camera ${index + 1} (${device.deviceId.slice(0, 5)}...)`;
-            selectCamera.appendChild(option);
-          });
-
-          const savedCamera = localStorage.getItem("leafsense_camera_id");
-          if (savedCamera && Array.from(selectCamera.options).some(o => o.value === savedCamera)) {
-            selectCamera.value = savedCamera;
-          }
-        } catch (error) {
-          console.warn("Device enumeration note:", error);
-          selectCamera.innerHTML = '<option value="">Default Camera</option>';
-        }
-      }
-
-      setupCameraSelection();
-
-      selectCamera.onchange = () => {
-        if (selectCamera.value && selectCamera.value.length > 5) {
-          localStorage.setItem("leafsense_camera_id", selectCamera.value);
-        }
-        if (isStreaming) {
-          restartCameraStream();
+      // ==========================================
+      // Vietnamese Remedies Database
+      // ==========================================
+      const REMEDIES = {
+        "black pepper footrot": {
+          title: "Bệnh Chết Nhanh (Thối Rễ)",
+          remedy: "Tác nhân do nấm Phytophthora capsici. Tưới gốc Ridomil Gold 68WG hoặc Aliette 800WG (2-3 lít/gốc). Xử lý rãnh thoát nước chống ngập úng mùa mưa.",
+          color: "text-rose-600"
+        },
+        "black pepper slow decline": {
+          title: "Bệnh Chết Chậm (Vàng Lá Tuyến Trùng)",
+          remedy: "Do tuyến trùng Meloidogyne kết hợp nấm Fusarium. Tưới thuốc trừ tuyến trùng Velum Prime 400SC hoặc Tervigo 020SC. Bón phân hữu cơ vi sinh ủ nấm Trichoderma.",
+          color: "text-amber-600"
+        },
+        "black pepper pollu disease": {
+          title: "Bệnh Thán Thư (Pollu / Đốm Lá)",
+          remedy: "Do nấm Colletotrichum gloeosporioides. Phun ướt đều tán lá bằng Amistar Top 325SC, Score 250EC hoặc Antracol 70WP. Cắt tỉa cành thông thoáng.",
+          color: "text-amber-600"
+        },
+        "black pepper yellow mottle virus": {
+          title: "Bệnh Khảm Vàng Lá (Virus)",
+          remedy: "Do virus truyền qua rầy mềm/rệp sáp. Phun thuốc trừ côn trùng chích hút (Confidor 200SL hoặc Movento 150OD). Tiêu hủy các trụ tiêu bệnh nặng để tránh lây lan.",
+          color: "text-purple-600"
+        },
+        "black pepper leaf blight": {
+          title: "Bệnh Cháy Lá Hoại Tử (Đốm Khô)",
+          remedy: "Do nấm Rhizoctonia / Corticium salmonicolor. Cắt bỏ lá bệnh và phun phòng trừ bằng thuốc gốc đồng Coc85, Champion 77WP hoặc Anvil 5SC.",
+          color: "text-amber-600"
+        },
+        "black pepper healthy": {
+          title: "Lá Hồ Tiêu Khỏe Mạnh",
+          remedy: "Tán lá sinh trưởng xanh tốt, không phát hiện vết bệnh. Tiếp tục duy trì chế độ tưới tiêu và bón phân hữu cơ định kỳ.",
+          color: "text-emerald-600"
         }
       };
 
-      
-      // Connection Status layout updates
+      function formatLabel(label) {
+        if (!label) return "Chưa xác định";
+        const clean = label.toLowerCase().replace(/_/g, " ").trim();
+        const found = REMEDIES[clean];
+        if (found) return found.title;
+        return label.replace(/_/g, ' ').replace(/black pepper /i, '');
+      }
+
+      function checkTorchSupport() {}
+
+      function clearDetections() {
+        currentDetections = [];
+        trackedTargets.clear();
+        if (targetList) {
+          targetList.innerHTML = `
+            <div id="target-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-400">
+              <div class="w-12 h-12 rounded-full border border-dashed border-pastel-border flex items-center justify-center mb-4">
+                <i data-lucide="scan-line" class="w-6 h-6 text-zinc-300"></i>
+              </div>
+              <p class="text-sm font-bold text-zinc-500 font-display">Chưa Có Dữ Liệu</p>
+              <p class="text-xs text-zinc-400 max-w-[200px] mt-1.5 leading-relaxed">Hướng camera hoặc tải ảnh lên để bắt đầu chẩn đoán.</p>
+            </div>
+          `;
+          if (window.lucide) lucide.createIcons();
+        }
+        if (cardTargets) cardTargets.textContent = "0";
+        if (trackedCounter) trackedCounter.textContent = "0 Lá";
+      }
+
+      // ==========================================
+      // Canvas Rendering (Boxes & Polygon Masks)
+      // ==========================================
+      function drawBoundingBoxes(ctx) {
+        if (!currentDetections || currentDetections.length === 0) return;
+
+        const w = overlay.width;
+        const h = overlay.height;
+        const baseScale = Math.max(1.0, Math.min(w, h) / 480);
+        const lineW = Math.max(4, Math.round(4.0 * baseScale));
+
+        currentDetections.forEach((det, detIdx) => {
+          const leafId = det.track_id !== null && det.track_id !== undefined ? det.track_id : (detIdx + 1);
+          const originalFrame = det.originalFrameSize || { width: w, height: h };
+          const scaleX = w / originalFrame.width;
+          const scaleY = h / originalFrame.height;
+
+          const [x1_orig, y1_orig, x2_orig, y2_orig] = det.bbox_xyxy;
+          const x1 = x1_orig * scaleX;
+          const y1 = y1_orig * scaleY;
+          const x2 = x2_orig * scaleX;
+          const y2 = y2_orig * scaleY;
+
+          const rawLabel = det.stable_disease?.label || det.disease?.label || "healthy";
+          const isHealthy = rawLabel.toLowerCase().includes("healthy");
+          const strokeStyleColor = isHealthy ? "#22c55e" : "#ef4444";
+          const glowColor = isHealthy ? "rgba(34, 197, 94, 0.6)" : "rgba(239, 68, 68, 0.6)";
+          const secondaryColor = isHealthy ? "rgba(34, 197, 94, 0.25)" : "rgba(239, 68, 68, 0.25)";
+
+          // Draw polygon mask if available
+          if (det.mask_xy && det.mask_xy.length > 0) {
+            ctx.save();
+            ctx.beginPath();
+            det.mask_xy.forEach((pt, ptIdx) => {
+              const px = pt[0] * scaleX;
+              const py = pt[1] * scaleY;
+              if (ptIdx === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+            ctx.fillStyle = secondaryColor;
+            ctx.fill();
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = Math.round(8 * baseScale);
+            ctx.strokeStyle = strokeStyleColor;
+            ctx.lineWidth = lineW;
+            ctx.lineJoin = "round";
+            ctx.stroke();
+            ctx.restore();
+          } else {
+            ctx.save();
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = Math.round(8 * baseScale);
+            ctx.strokeStyle = strokeStyleColor;
+            ctx.lineWidth = lineW;
+            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            ctx.fillStyle = secondaryColor;
+            ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+            ctx.restore();
+          }
+
+          // Text Badge Tag
+          const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
+          const viLabel = formatLabel(rawLabel);
+          const text = `#${leafId} ${viLabel} • ${(conf * 100).toFixed(0)}%`;
+
+          const fontSize = Math.max(14, Math.round(16 * baseScale));
+          ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans', system-ui, sans-serif`;
+          const textMetrics = ctx.measureText(text);
+          const padH = Math.round(10 * baseScale);
+          const padV = Math.round(6 * baseScale);
+          const barHeight = fontSize + padV * 2;
+          const barWidth = textMetrics.width + padH * 2;
+
+          let tagY = y1 - barHeight - (4 * baseScale);
+          let tagX = x1;
+          if (tagY < 0) tagY = y1 + (6 * baseScale);
+          if (tagX + barWidth > w) tagX = Math.max(0, w - barWidth - 4);
+
+          ctx.save();
+          ctx.fillStyle = strokeStyleColor;
+          ctx.shadowColor = glowColor;
+          ctx.shadowBlur = Math.round(8 * baseScale);
+          ctx.fillRect(tagX, tagY, barWidth, barHeight);
+          ctx.shadowColor = "transparent";
+          ctx.fillStyle = "#ffffff";
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, tagX + padH, tagY + padV + (fontSize / 2));
+          ctx.restore();
+        });
+      }
+
+      // ==========================================
+      // Diagnostic Cards Rendering
+      // ==========================================
+      function updateTrackedCardContainer(detections) {
+        if (!targetList) return;
+        if (!detections || detections.length === 0) {
+          clearDetections();
+          return;
+        }
+
+        const emptyState = document.getElementById("target-empty-state");
+        if (emptyState) emptyState.remove();
+
+        const activeIdsThisFrame = new Set();
+
+        detections.forEach((det, idx) => {
+          const trackId = det.track_id !== null && det.track_id !== undefined ? String(det.track_id) : `leaf-${idx + 1}`;
+          activeIdsThisFrame.add(trackId);
+
+          const rawLabel = det.stable_disease?.label || det.disease?.label || "healthy";
+          const label = formatLabel(rawLabel);
+          const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
+          const isHealthy = rawLabel.toLowerCase().includes("healthy");
+
+          const cleanKey = rawLabel.toLowerCase().replace(/_/g, " ").trim();
+          const remedyInfo = REMEDIES[cleanKey] || {
+            title: label,
+            remedy: "Theo dõi tình trạng tán lá và xử lý sớm khi có dấu hiệu lây lan.",
+            color: isHealthy ? "text-emerald-600" : "text-amber-600"
+          };
+
+          let cardEl = document.getElementById(`target-card-${trackId}`);
+          if (!cardEl) {
+            cardEl = document.createElement("div");
+            cardEl.id = `target-card-${trackId}`;
+            cardEl.className = "bg-white border-4 border-pastel-border rounded-3xl p-3.5 flex flex-col gap-2 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer select-none animate-slide-in";
+            
+            cardEl.innerHTML = `
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="bg-pastel-greenDark text-white px-2 py-0.5 rounded-lg text-[10px] font-bold font-mono">#${trackId}</span>
+                  <h4 class="font-bold text-xs text-pastel-greenDark font-display">${label}</h4>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full text-[9px] font-bold ${isHealthy ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'}">
+                  ${isHealthy ? 'Khỏe mạnh' : 'Nhiễm bệnh'}
+                </span>
+              </div>
+              <div class="flex justify-between items-center text-[10px] text-zinc-500 font-medium">
+                <span>Độ chính xác: <strong class="text-zinc-700 font-mono">${(conf * 100).toFixed(0)}%</strong></span>
+              </div>
+              <div class="w-full bg-zinc-100 border border-zinc-200 rounded-full h-1.5 overflow-hidden">
+                <div class="h-full rounded-full ${isHealthy ? 'bg-pastel-green' : 'bg-pastel-pink'}" style="width: ${conf * 100}%"></div>
+              </div>
+              <div class="pt-2 mt-1 border-t border-pastel-border text-[10px] text-zinc-600 leading-relaxed font-sans">
+                <strong class="text-pastel-greenDark">💡 Xử lý:</strong> ${remedyInfo.remedy}
+              </div>
+            `;
+            targetList.appendChild(cardEl);
+            trackedTargets.set(trackId, cardEl);
+          } else {
+            const confEl = cardEl.querySelector(".font-mono");
+            if (confEl) confEl.textContent = `${(conf * 100).toFixed(0)}%`;
+          }
+        });
+
+        // Clean up expired cards in realtime mode
+        for (const [id, el] of trackedTargets.entries()) {
+          if (!activeIdsThisFrame.has(id)) {
+            el.remove();
+            trackedTargets.delete(id);
+          }
+        }
+      }
+
+      // ==========================================
+      // Live Stream WebSocket & Camera Loop
+      // ==========================================
       function updateConnectionStatus(status) {
         if (!statusDot || !statusBadge || !statusText) return;
         statusDot.className = "h-2.5 w-2.5 rounded-full";
@@ -951,7 +921,7 @@
           case "connected":
             statusDot.classList.add("bg-pastel-green", "status-pulse-connected");
             statusBadge.classList.add("bg-pastel-greenLight", "text-pastel-greenDark", "border-pastel-border");
-            statusText.textContent = "Live Stream Connected";
+            statusText.textContent = "AI Live Connected";
             break;
           case "connecting":
             statusDot.classList.add("bg-amber-400", "animate-pulse");
@@ -967,20 +937,18 @@
         }
       }
 
-      // Backend status checker
       async function fetchBackendMetadata() {
         const wsUrl = inputWsUrl.value;
         localStorage.setItem("leafsense_ws_url", wsUrl);
         const httpUrl = getHttpUrl(wsUrl);
-        
         try {
           const response = await fetch(`${httpUrl}/health`);
           if (response.ok) {
             const data = await response.json();
-            backendDevice.textContent = data.device || "cpu";
+            if (backendDevice) backendDevice.textContent = data.device || "cpu";
           }
         } catch (err) {
-          backendDevice.textContent = "unknown";
+          if (backendDevice) backendDevice.textContent = "unknown";
         }
       }
 
@@ -1000,7 +968,6 @@
           .replace(/\/+$/, "");
       }
 
-      // Send WebSocket configuration (confidence thresholds)
       function sendWsConfig() {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
         const detConf = parseFloat(sliderDetectorConf.value) / 100.0;
@@ -1012,7 +979,6 @@
         }));
       }
 
-      // Connect WebSocket
       function connectWebSocket() {
         if (ws) {
           try { ws.close(); } catch (e) {}
@@ -1027,7 +993,7 @@
 
           ws.onopen = () => {
             updateConnectionStatus("connected");
-            showToast("Đã kết nối luồng AI thời gian thực", "success");
+            showToast("Đã kết nối AI thời gian thực", "success");
             fetchBackendMetadata();
             sendWsConfig();
             
@@ -1040,10 +1006,7 @@
             isProcessingFrame = false;
             try {
               const result = JSON.parse(event.data);
-              if (result.type === "reset") {
-                showToast("Tracker memory cleared", "success");
-                return;
-              }
+              if (result.type === "reset" || result.type === "config") return;
               processDetections(result);
             } catch (e) {
               console.error("Parse error:", e);
@@ -1068,18 +1031,13 @@
         }
       }
 
-      // Send next video frame over WebSocket (with auto Watchdog recovery)
-      let frameWatchdogTimer = null;
-
       function sendNextFrame() {
         if (!isStreaming || currentMode !== 'realtime' || !ws || ws.readyState !== WebSocket.OPEN) {
           isProcessingFrame = false;
           return;
         }
 
-        if (isProcessingFrame) {
-          return;
-        }
+        if (isProcessingFrame) return;
 
         if (video.videoWidth === 0 || video.videoHeight === 0) {
           requestAnimationFrame(sendNextFrame);
@@ -1089,17 +1047,14 @@
         isProcessingFrame = true;
         lastFrameSentTime = performance.now();
 
-        // Watchdog timer: If server doesn't respond in 1500ms, unlock processing flag
         if (frameWatchdogTimer) clearTimeout(frameWatchdogTimer);
         frameWatchdogTimer = setTimeout(() => {
           if (isProcessingFrame && isStreaming && currentMode === 'realtime') {
-            console.warn("Watchdog: frame response timeout, recovering pipeline...");
             isProcessingFrame = false;
             sendNextFrame();
           }
         }, 1500);
 
-        // Scale resolution
         const targetRes = selectResolution ? selectResolution.value : "720p";
         let maxDim = 720;
         if (targetRes === "480p") maxDim = 480;
@@ -1127,13 +1082,9 @@
             }
 
             if (ws && ws.readyState === WebSocket.OPEN) {
-              lastCaptureBlob = blob;
               const sizeKb = blob.size / 1024;
-              if (cardPayload) {
-                cardPayload.textContent = `${sizeKb.toFixed(1)} KB`;
-              }
+              if (cardPayload) cardPayload.textContent = `${sizeKb.toFixed(1)} KB`;
 
-              // Send binary JPEG bytes
               blob.arrayBuffer().then((buffer) => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
                   ws.send(buffer);
@@ -1152,7 +1103,6 @@
         );
       }
 
-      // Process WebSocket Detections
       function processDetections(result) {
         if (frameWatchdogTimer) clearTimeout(frameWatchdogTimer);
         
@@ -1160,14 +1110,12 @@
         if (cardTargets) cardTargets.textContent = detections.length;
         if (trackedCounter) trackedCounter.textContent = `${detections.length} Lá`;
 
-        // Update RTT Latency
         if (lastFrameSentTime > 0) {
           const rtt = Math.round(performance.now() - lastFrameSentTime);
           if (cardLatency) cardLatency.textContent = rtt;
           if (statLatency) statLatency.textContent = `${rtt}ms`;
         }
 
-        // FPS calculation
         const now = performance.now();
         frameTimestamps.push(now);
         while (frameTimestamps.length > 0 && frameTimestamps[0] <= now - 1000) {
@@ -1179,19 +1127,11 @@
 
         currentDetections = detections.map((det, idx) => ({
           ...det,
-          _assignedId: det.track_id !== null && det.track_id !== undefined ? det.track_id : `leaf-${idx + 1}`,
+          _assignedId: det.track_id !== null && det.track_id !== undefined ? det.track_id : (idx + 1),
           originalFrameSize: result.frame
         }));
 
-        if (detections.length > 0 && lastCaptureBlob) {
-          if (lastCaptureObjectUrl) URL.revokeObjectURL(lastCaptureObjectUrl);
-          lastCaptureObjectUrl = URL.createObjectURL(lastCaptureBlob);
-          frameImageObj.onload = () => updateTrackedCardContainer(currentDetections);
-          frameImageObj.src = lastCaptureObjectUrl;
-        } else {
-          updateTrackedCardContainer(currentDetections);
-        }
-
+        updateTrackedCardContainer(currentDetections);
         if (typeof updateHealthMeter === "function") {
           updateHealthMeter(currentDetections);
         }
@@ -1206,7 +1146,48 @@
         }, remainingDelay);
       }
 
-      // Multi-layer Resilient Camera Stream Starter
+      // Safe Camera Devices Enumeration
+      async function setupCameraSelection() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          selectCamera.innerHTML = '<option value="">Default Camera</option>';
+          return;
+        }
+
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter(device => device.kind === "videoinput");
+          
+          selectCamera.innerHTML = "";
+          if (videoDevices.length === 0) {
+            selectCamera.innerHTML = '<option value="">Default Camera</option>';
+            return;
+          }
+
+          videoDevices.forEach((device, index) => {
+            const option = document.createElement("option");
+            option.value = device.deviceId;
+            option.textContent = device.label || `Camera ${index + 1} (${device.deviceId.slice(0, 5)}...)`;
+            selectCamera.appendChild(option);
+          });
+
+          const savedCamera = localStorage.getItem("leafsense_camera_id");
+          if (savedCamera && Array.from(selectCamera.options).some(o => o.value === savedCamera)) {
+            selectCamera.value = savedCamera;
+          }
+        } catch (error) {
+          selectCamera.innerHTML = '<option value="">Default Camera</option>';
+        }
+      }
+
+      setupCameraSelection();
+
+      selectCamera.onchange = () => {
+        if (selectCamera.value && selectCamera.value.length > 5) {
+          localStorage.setItem("leafsense_camera_id", selectCamera.value);
+        }
+        if (isStreaming) restartCameraStream();
+      };
+
       async function startCamera() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           showToast("Trình duyệt không hỗ trợ truy cập Camera", "error");
@@ -1217,58 +1198,37 @@
           ? selectCamera.value 
           : null;
 
-        // Constraint candidate levels
         const constraintAttempts = [];
-
         if (validDeviceId) {
           constraintAttempts.push({
             audio: false,
-            video: {
-              deviceId: { exact: validDeviceId },
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
+            video: { deviceId: { exact: validDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
           });
         }
-
         constraintAttempts.push({
           audio: false,
-          video: {
-            facingMode: { ideal: currentFacingMode || "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
+          video: { facingMode: { ideal: currentFacingMode || "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
         });
-
         constraintAttempts.push({
           audio: false,
-          video: {
-            facingMode: currentFacingMode || "environment"
-          }
+          video: { facingMode: currentFacingMode || "environment" }
         });
-
-        constraintAttempts.push({
-          audio: false,
-          video: true
-        });
+        constraintAttempts.push({ audio: false, video: true });
 
         let activeStream = null;
         let lastErr = null;
 
         for (const constraints of constraintAttempts) {
           try {
-            console.log("Attempting camera with constraints:", constraints);
             activeStream = await navigator.mediaDevices.getUserMedia(constraints);
             if (activeStream) break;
           } catch (err) {
-            console.warn("Constraint attempt failed:", err);
             lastErr = err;
           }
         }
 
         if (!activeStream) {
-          console.error("All camera constraints failed:", lastErr);
-          showToast("Không thể mở Camera: " + (lastErr?.message || "Vui lòng cấp quyền truy cập"), "error");
+          showToast("Không thể mở Camera: " + (lastErr?.message || "Vui lòng cấp quyền"), "error");
           stopCamera();
           return;
         }
@@ -1279,12 +1239,7 @@
           
           await new Promise((resolve) => {
             video.onloadedmetadata = async () => {
-              try {
-                await video.play();
-              } catch (e) {
-                console.warn("Video play exception:", e);
-              }
-              checkTorchSupport();
+              try { await video.play(); } catch (e) {}
               resolve();
             };
             setTimeout(resolve, 800);
@@ -1292,7 +1247,6 @@
 
           isStreaming = true;
           startOverlay.classList.add("hidden");
-          
           iconStreamPlay.classList.add("hidden");
           iconStreamStop.classList.remove("hidden");
           btnStreamToggle.className = "p-3 rounded-xl bg-pastel-pink border border-rose-500/20 text-white font-bold transition active:scale-95 flex items-center justify-center cute-shadow-btn-pink select-none cursor-pointer";
@@ -1300,7 +1254,6 @@
           isDrawing = true;
           requestAnimationFrame(renderLoop);
 
-          // Refresh device list now that permissions are definitely granted
           setupCameraSelection();
 
           if (currentMode === 'realtime') {
@@ -1317,31 +1270,23 @@
           showToast("Camera đã sẵn sàng!", "success");
 
         } catch (error) {
-          console.error("Camera playback fail:", error);
           showToast("Lỗi mở camera: " + error.message, "error");
           stopCamera();
         }
       }
 
-      // Stop camera feed
       function stopCamera() {
         if (stream) {
           stream.getTracks().forEach(track => track.stop());
           stream = null;
         }
-        if (video) {
-          video.srcObject = null;
-        }
+        if (video) video.srcObject = null;
 
         isStreaming = false;
         isDrawing = false;
         
-        if (viewportContainer) {
-          viewportContainer.classList.remove("scanning-live");
-        }
-        if (currentMode !== 'upload') {
-          startOverlay.classList.remove("hidden");
-        }
+        if (viewportContainer) viewportContainer.classList.remove("scanning-live");
+        if (currentMode !== 'upload') startOverlay.classList.remove("hidden");
         iconStreamPlay.classList.remove("hidden");
         iconStreamStop.classList.add("hidden");
         btnStreamToggle.className = "p-3 rounded-xl bg-pastel-green border border-emerald-500/20 text-white font-bold transition active:scale-95 flex items-center justify-center cute-shadow-btn select-none cursor-pointer";
@@ -1353,18 +1298,15 @@
       async function restartCameraStream() {
         const wasStreaming = isStreaming;
         stopCamera();
-        if (wasStreaming) {
-          setTimeout(startCamera, 300);
-        }
+        if (wasStreaming) setTimeout(startCamera, 300);
       }
 
-      // Render Loop (Local drawing webcam frame)
       function renderLoop() {
         if (!isDrawing || video.paused || video.ended) return;
 
         if (overlay.width !== video.videoWidth || overlay.height !== video.videoHeight) {
-          overlay.width = video.videoWidth;
-          overlay.height = video.videoHeight;
+          overlay.width = video.videoWidth || 640;
+          overlay.height = video.videoHeight || 480;
         }
 
         const ctx = overlay.getContext("2d");
@@ -1373,46 +1315,59 @@
         // Render box overlays locally
         drawBoundingBoxes(ctx);
         
-        if (currentMode === 'realtime') {
-          const now = performance.now();
-          while (frameTimestamps.length > 0 && frameTimestamps[0] <= now - 1000) {
-            frameTimestamps.shift();
-          }
-          const fpsVal = frameTimestamps.length;
-          statFps.textContent = fpsVal.toFixed(1);
-          cardFps.textContent = fpsVal.toFixed(1);
-        }
-
         requestAnimationFrame(renderLoop);
       }
 
-      // Mode 2: Capture Snapshot Action
+      btnStreamToggle.onclick = () => {
+        if (isStreaming) stopCamera();
+        else startCamera();
+      };
+
+      btnStartOverlay.onclick = () => {
+        startCamera();
+      };
+
+      // Reset tracker
+      btnResetTracker.onclick = () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "reset" }));
+        } else {
+          const httpUrl = getHttpUrl(inputWsUrl.value);
+          fetch(`${httpUrl}/tracker/reset`, { method: "POST" })
+            .then(res => { if (res.ok) showToast("Đã làm mới bộ nhớ theo dõi", "success"); })
+            .catch(() => showToast("Không thể kết nối API", "error"));
+        }
+        clearDetections();
+      };
+
+      // Mode 2: Snapshot Action
       btnCaptureAction.onclick = async () => {
         if (!isStreaming || video.paused || video.videoWidth === 0) {
-          showToast("Camera stream is not active", "error");
+          showToast("Camera chưa hoạt động", "error");
           return;
         }
 
-        // Draw current frozen frame to overlay
         isDrawing = false;
         overlay.width = video.videoWidth;
         overlay.height = video.videoHeight;
         const ctx = overlay.getContext("2d");
         ctx.drawImage(video, 0, 0, overlay.width, overlay.height);
 
-        // Keep static image frame for cropping
         frameImageObj.src = overlay.toDataURL("image/jpeg", 0.95);
-        
         loadingOverlay.classList.remove("hidden");
         btnCaptureAction.classList.add("hidden");
         btnRetakeAction.classList.remove("hidden");
 
-        // Convert the frozen overlay frame into a blob and POST to /predict/image
-        overlay.toBlob(
+        captureCanvas.width = video.videoWidth;
+        captureCanvas.height = video.videoHeight;
+        const capCtx = captureCanvas.getContext("2d");
+        capCtx.drawImage(video, 0, 0);
+
+        captureCanvas.toBlob(
           async (blob) => {
             if (!blob) {
               loadingOverlay.classList.add("hidden");
-              showToast("Failed to capture frame image", "error");
+              showToast("Lỗi chụp ảnh", "error");
               return;
             }
 
@@ -1431,14 +1386,13 @@
               if (response.ok) {
                 const data = await response.json();
                 processStaticPredictions(data);
-                showToast("Snapshot analyzed successfully!", "success");
+                showToast("Đã phân tích ảnh chụp thành công!", "success");
               } else {
                 throw new Error("HTTP error " + response.status);
               }
             } catch (err) {
               loadingOverlay.classList.add("hidden");
-              showToast("Inference failed: check backend API", "error");
-              console.error(err);
+              showToast("Lỗi phân tích: " + err.message, "error");
             }
           },
           "image/jpeg",
@@ -1446,7 +1400,6 @@
         );
       };
 
-      // Mode 2: Retake snapshot action
       btnRetakeAction.onclick = () => {
         clearDetections();
         btnCaptureAction.classList.remove("hidden");
@@ -1455,68 +1408,43 @@
         requestAnimationFrame(renderLoop);
       };
 
-      // Mode 3: Drag and Drop & Upload Action trigger
-      uploadContainer.onclick = () => fileInput.click();
-      btnBrowseFile.onclick = (e) => {
-        e.stopPropagation();
-        fileInput.click();
-      };
-      btnDemoFile.onclick = async (e) => {
-        e.stopPropagation();
-        clearDetections();
-        loadingOverlay.classList.remove("hidden");
-        
-        try {
-          const response = await fetch("demo_leaf.jpg");
-          if (!response.ok) {
-            throw new Error(`Demo image not found (HTTP ${response.status})`);
+      // ==========================================
+      // Mode 3: Image Upload & REST API
+      // ==========================================
+      if (btnBrowseFile) btnBrowseFile.onclick = (e) => { e.stopPropagation(); fileInput.click(); };
+      if (btnDemoFile) {
+        btnDemoFile.onclick = async (e) => {
+          e.stopPropagation();
+          loadingOverlay.classList.remove("hidden");
+          try {
+            const response = await fetch("demo_leaf.jpg");
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const blob = await response.blob();
+            const file = new File([blob], "demo_leaf.jpg", { type: "image/jpeg" });
+            handleUploadedFile(file);
+          } catch (err) {
+            loadingOverlay.classList.add("hidden");
+            showToast("Lỗi tải ảnh mẫu: " + err.message, "error");
           }
-          const blob = await response.blob();
-          const file = new File([blob], "demo_leaf.jpg", { type: "image/jpeg" });
-          handleUploadedFile(file);
-        } catch (err) {
-          loadingOverlay.classList.add("hidden");
-          showToast("Failed to load demo image: " + err.message, "error");
-          console.error(err);
-        }
-      };
+        };
+      }
 
       fileInput.onchange = (e) => {
         const file = e.target.files[0];
         if (file) handleUploadedFile(file);
       };
 
-      // Handle file drops
-      uploadContainer.ondragover = (e) => {
-        e.preventDefault();
-        uploadContainer.classList.add("border-emerald-500/50", "bg-zinc-900/55");
-      };
-      
-      uploadContainer.ondragleave = () => {
-        uploadContainer.classList.remove("border-emerald-500/50", "bg-zinc-900/55");
-      };
-
-      uploadContainer.ondrop = (e) => {
-        e.preventDefault();
-        uploadContainer.classList.remove("border-emerald-500/50", "bg-zinc-900/55");
-        const file = e.dataTransfer.files[0];
-        if (file) handleUploadedFile(file);
-      };
-
-      // Upload and analyze file
       async function handleUploadedFile(file) {
         if (!file || !file.type.match("image.*")) {
-          showToast("Vui lòng chọn file ảnh định dạng JPG, PNG hoặc WebP", "error");
+          showToast("Vui lòng chọn file ảnh JPG, PNG hoặc WebP", "error");
           return;
         }
 
         clearDetections();
         loadingOverlay.classList.remove("hidden");
-        
-        // Hide upload dropzone so canvas is displayed cleanly
         uploadContainer.classList.add("hidden");
         btnClearUpload.classList.remove("hidden");
-        
+
         const reader = new FileReader();
         reader.onload = (event) => {
           frameImageObj = new Image();
@@ -1526,8 +1454,6 @@
             const ctx = overlay.getContext("2d");
             ctx.clearRect(0, 0, overlay.width, overlay.height);
             ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
-            
-            // Send to backend for AI inference
             uploadAndAnalyzeBlob(file);
           };
           frameImageObj.src = event.target.result;
@@ -1545,7 +1471,6 @@
           const clsConfVal = parseFloat(sliderClassifierConf.value) / 100.0;
           const targetEndpoint = `${httpUrl}/predict/image?tracker=false&detector_conf=${detConfVal}&classifier_conf=${clsConfVal}`;
           
-          console.log("Sending prediction request to:", targetEndpoint);
           const response = await fetch(targetEndpoint, {
             method: "POST",
             body: formData
@@ -1553,22 +1478,44 @@
 
           if (response.ok) {
             const data = await response.json();
-            console.log("Prediction result:", data);
             processStaticPredictions(data);
-            
             uploadContainer.classList.add("hidden");
             btnClearUpload.classList.remove("hidden");
             const count = data.detections ? data.detections.length : 0;
-            showToast(`Đã phân tích xong: phát hiện ${count} lá!`, "success");
+            showToast(`Phát hiện ${count} lá trên ảnh!`, "success");
           } else {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
         } catch (err) {
           loadingOverlay.classList.add("hidden");
-          showToast(`Lỗi kết nối API: ${err.message}`, "error");
-          console.error("Upload inference error:", err);
+          showToast(`Lỗi phân tích: ${err.message}`, "error");
           uploadContainer.classList.remove("hidden");
         }
+      }
+
+      function processStaticPredictions(result) {
+        loadingOverlay.classList.add("hidden");
+        const detections = result.detections || [];
+        if (cardTargets) cardTargets.textContent = detections.length;
+        if (trackedCounter) trackedCounter.textContent = `${detections.length} Lá`;
+        if (cardLatency) cardLatency.textContent = "-";
+
+        currentDetections = detections.map((det, idx) => ({
+          ...det,
+          _assignedId: det.track_id !== null && det.track_id !== undefined ? det.track_id : (idx + 1),
+          originalFrameSize: result.frame
+        }));
+
+        const ctx = overlay.getContext("2d");
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        if (frameImageObj && frameImageObj.complete && frameImageObj.naturalWidth > 0) {
+          ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
+        }
+        drawBoundingBoxes(ctx);
+
+        updateTrackedCardContainer(currentDetections);
+        if (typeof updateHealthMeter === "function") updateHealthMeter(currentDetections);
+        if (window.lucide) lucide.createIcons();
       }
 
       btnClearUpload.onclick = () => {
@@ -1578,165 +1525,134 @@
         uploadContainer.classList.remove("hidden");
         btnClearUpload.classList.add("hidden");
         fileInput.value = "";
-        showToast("Đã xóa ảnh đang chẩn đoán");
+        showToast("Đã xóa ảnh");
       };
 
-      // Snap snapshot frame screenshot of overlay canvas
-      btnSnapshot.onclick = () => {
-        const link = document.createElement("a");
-        link.download = `leafsense-analysis-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.jpg`;
-        link.href = overlay.toDataURL("image/jpeg", 0.95);
-        link.click();
-        showToast("Snapshot successfully downloaded", "success");
-      };
+      // Mode Switcher
+      function switchMode(mode) {
+        if (mode === currentMode) return;
+        currentMode = mode;
+        showToast(`Đã chuyển sang chế độ ${formatLabel(mode)}`);
 
-      // Fetch Vercel environment variables dynamically
-      fetch("/api/config")
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.WS_URL) {
-            if (!savedWsUrl) {
-              inputWsUrl.value = data.WS_URL;
-            }
-            console.log("Vercel config loaded, WS_URL:", data.WS_URL);
+        if (mode !== 'realtime' && viewportContainer) {
+          viewportContainer.classList.remove("scanning-live");
+        }
+
+        ['realtime', 'snapshot', 'upload'].forEach(m => {
+          const btn = document.getElementById(`btn-mode-${m}`);
+          if (btn) {
+            btn.className = "flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent text-zinc-650 hover:text-zinc-850 hover:bg-zinc-50 select-none cursor-pointer whitespace-nowrap";
           }
-        })
-        .catch(err => console.log("Failed to fetch Vercel config, using default:", err));
+        });
+        const activeBtn = document.getElementById(`btn-mode-${mode}`);
+        if (activeBtn) {
+          activeBtn.className = "flex-1 py-2.5 px-3 rounded-xl font-display font-semibold text-[11px] sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 border border-transparent mode-pill-active select-none cursor-pointer whitespace-nowrap";
+        }
 
-      // Handle tab visibility changes to pause streaming when backgrounded
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden && isStreaming && currentMode === 'realtime') {
+        const ctrlRt = document.getElementById("controls-realtime");
+        const ctrlSn = document.getElementById("controls-snapshot");
+        const ctrlUp = document.getElementById("controls-upload");
+        if (ctrlRt) ctrlRt.className = mode === 'realtime' ? 'flex items-center gap-3' : 'hidden';
+        if (ctrlSn) ctrlSn.className = mode === 'snapshot' ? 'flex items-center gap-3' : 'hidden';
+        if (ctrlUp) ctrlUp.className = mode === 'upload' ? 'flex items-center gap-3' : 'hidden';
+
+        const camCont = document.getElementById("camera-selector-container");
+        const resCont = document.getElementById("resolution-selector-container");
+        const floatHud = document.getElementById("floating-hud");
+        const mobileDock = document.getElementById("mobile-quick-dock");
+        const btnGrid = document.getElementById("btn-grid-toggle");
+        const btnSnapshotDownload = document.getElementById("btn-snapshot");
+
+        if (camCont) camCont.className = mode !== 'upload' ? 'flex flex-col gap-1.5' : 'hidden';
+        if (resCont) resCont.className = mode !== 'upload' ? 'flex flex-col gap-1.5' : 'hidden';
+        if (floatHud) floatHud.className = mode === 'realtime' ? 'absolute top-4 left-4 flex flex-col gap-1.5 pointer-events-none transition-all duration-300 select-none' : 'hidden';
+
+        clearDetections();
+
+        if (mode === 'realtime') {
+          if (mobileDock) mobileDock.classList.remove("hidden");
+          if (btnGrid) btnGrid.classList.remove("hidden");
+          if (btnSnapshotDownload) btnSnapshotDownload.classList.remove("hidden");
+          uploadContainer.classList.add("hidden");
+          startOverlay.classList.remove("hidden");
+          btnRetakeAction.classList.add("hidden");
+          btnCaptureAction.classList.remove("hidden");
+          if (isStreaming) connectWebSocket();
+          else startCamera();
+        } else if (mode === 'snapshot') {
+          if (mobileDock) mobileDock.classList.remove("hidden");
+          if (btnGrid) btnGrid.classList.remove("hidden");
+          if (btnSnapshotDownload) btnSnapshotDownload.classList.remove("hidden");
+          if (ws) ws.close();
+          uploadContainer.classList.add("hidden");
+          startOverlay.classList.remove("hidden");
+          btnRetakeAction.classList.add("hidden");
+          btnCaptureAction.classList.remove("hidden");
+          if (isStreaming) {
+            startOverlay.classList.add("hidden");
+            isDrawing = true;
+            requestAnimationFrame(renderLoop);
+          } else {
+            startCamera();
+          }
+        } else if (mode === 'upload') {
+          if (mobileDock) mobileDock.classList.add("hidden");
+          if (btnGrid) btnGrid.classList.add("hidden");
+          if (btnSnapshotDownload) btnSnapshotDownload.classList.add("hidden");
+          if (ws) ws.close();
           stopCamera();
-          showToast("Stream paused automatically while backgrounded");
-        }
-      });
-    
-
-      // Unified Leaf Selection Function (Synchronizes Canvas & Sidebar Cards)
-      function selectLeaf(targetId) {
-        selectedLeafId = String(targetId);
-
-        // Re-draw canvas immediately for static images or snapshots
-        if (frameImageObj && frameImageObj.src) {
-          const ctx = overlay.getContext("2d");
-          ctx.clearRect(0, 0, overlay.width, overlay.height);
-          if (frameImageObj.complete && frameImageObj.naturalWidth > 0) {
-            ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
-          }
-          drawBoundingBoxes(ctx);
-        }
-
-        // 1. Move matching card to the VERY TOP of the diagnostic list!
-        const cardEl = document.getElementById(`target-card-${targetId}`);
-        const targetList = document.getElementById("target-list");
-        if (cardEl && targetList) {
-          // Prepend card to top of the list
-          targetList.prepend(cardEl);
-          // Scroll container to top smoothly
-          targetList.scrollTo({ top: 0, behavior: "smooth" });
-
-          // Reset other cards and highlight this card
-          document.querySelectorAll("#target-list > div").forEach(c => {
-            c.classList.remove("ring-4", "ring-cyan-500", "scale-[1.02]", "bg-cyan-50/80", "border-cyan-400");
-          });
-
-          cardEl.classList.add("ring-4", "ring-cyan-500", "scale-[1.02]", "bg-cyan-50/80", "border-cyan-400");
-
-          // Auto-expand the treatment remedy drawer for the selected leaf!
-          const drawer = document.getElementById(`remedy-drawer-${targetId}`);
-          const indicator = document.getElementById(`expand-indicator-${targetId}`);
-          if (drawer) {
-            drawer.style.maxHeight = "300px";
-            drawer.classList.remove("border-transparent");
-            drawer.classList.add("border-pastel-border");
-          }
-          if (indicator) {
-            indicator.classList.add("rotate-180", "text-pastel-green");
-          }
-        }
-
-        // Find diagnosis info for Toast
-        const det = currentDetections.find(d => String(d._assignedId || d.track_id) === String(targetId));
-        if (det) {
-          const label = det.stable_disease?.label || det.disease?.label || "Lá cây";
-          const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
-          showToast(`🍃 Đang chọn Lá #${targetId}: ${formatLabel(label)} (${(conf * 100).toFixed(0)}%)`, "info");
+          startOverlay.classList.add("hidden");
+          uploadContainer.classList.remove("hidden");
+          btnClearUpload.classList.add("hidden");
         }
       }
 
-      // Letterbox-Aware Tap/Click on Canvas to Select Leaf
-      function handleCanvasClick(evt) {
-        if (!currentDetections || currentDetections.length === 0 || overlay.width === 0 || overlay.height === 0) return;
-
-        const rect = overlay.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return;
-
-        // Calculate exact letterbox rendering bounds inside the canvas element
-        const canvasRatio = overlay.width / overlay.height;
-        const elemRatio = rect.width / rect.height;
-
-        let renderWidth = rect.width;
-        let renderHeight = rect.height;
-        let offsetX = 0;
-        let offsetY = 0;
-
-        if (elemRatio > canvasRatio) {
-          // Element is wider than canvas -> black/empty bars on left/right
-          renderHeight = rect.height;
-          renderWidth = rect.height * canvasRatio;
-          offsetX = (rect.width - renderWidth) / 2;
-        } else {
-          // Element is taller than canvas -> black/empty bars on top/bottom
-          renderWidth = rect.width;
-          renderHeight = rect.width / canvasRatio;
-          offsetY = (rect.height - renderHeight) / 2;
-        }
-
-        const clientX = evt.clientX - rect.left - offsetX;
-        const clientY = evt.clientY - rect.top - offsetY;
-
-        // Ignore clicks on letterbox margins
-        if (clientX < 0 || clientX > renderWidth || clientY < 0 || clientY > renderHeight) return;
-
-        const clickX = (clientX / renderWidth) * overlay.width;
-        const clickY = (clientY / renderHeight) * overlay.height;
-
-        let matchedLeaf = null;
-        for (const det of currentDetections) {
-          const originalFrame = det.originalFrameSize || { width: overlay.width, height: overlay.height };
-          const sX = overlay.width / originalFrame.width;
-          const sY = overlay.height / originalFrame.height;
-
-          const [x1_orig, y1_orig, x2_orig, y2_orig] = det.bbox_xyxy;
-          const x1 = x1_orig * sX;
-          const y1 = y1_orig * sY;
-          const x2 = x2_orig * sX;
-          const y2 = y2_orig * sY;
-
-          if (clickX >= x1 && clickX <= x2 && clickY >= y1 && clickY <= y2) {
-            matchedLeaf = det;
-            break;
+      // Settings Drawers & Controls
+      const btnSettingsToggle = document.getElementById("btn-settings-toggle");
+      const quickSettingsDrawer = document.getElementById("quick-settings-drawer");
+      if (btnSettingsToggle && quickSettingsDrawer) {
+        btnSettingsToggle.onclick = (e) => {
+          e.stopPropagation();
+          const isOpen = quickSettingsDrawer.classList.contains("opacity-100");
+          if (isOpen) {
+            quickSettingsDrawer.classList.remove("opacity-100", "translate-y-0", "pointer-events-auto");
+            quickSettingsDrawer.classList.add("opacity-0", "-translate-y-4", "pointer-events-none");
+          } else {
+            quickSettingsDrawer.classList.add("opacity-100", "translate-y-0", "pointer-events-auto");
+            quickSettingsDrawer.classList.remove("opacity-0", "-translate-y-4", "pointer-events-none");
           }
-        }
-
-        if (matchedLeaf) {
-          const targetId = matchedLeaf._assignedId || (matchedLeaf.track_id !== null ? matchedLeaf.track_id : "leaf-1");
-          selectLeaf(targetId);
-        }
+        };
+        document.addEventListener("click", (e) => {
+          if (!quickSettingsDrawer.contains(e.target) && e.target !== btnSettingsToggle && !btnSettingsToggle.contains(e.target)) {
+            quickSettingsDrawer.classList.remove("opacity-100", "translate-y-0", "pointer-events-auto");
+            quickSettingsDrawer.classList.add("opacity-0", "-translate-y-4", "pointer-events-none");
+          }
+        });
       }
 
-      overlay.addEventListener("click", handleCanvasClick);
-      overlay.addEventListener("touchend", (e) => {
-        if (e.changedTouches && e.changedTouches.length > 0) {
-          handleCanvasClick(e.changedTouches[0]);
-        }
-      });
-      
-      // ==========================================
-      // SUPER FEATURES: Voice, Dosage Calc & Report
-      // ==========================================
+      const btnGridToggle = document.getElementById("btn-grid-toggle");
+      const cameraGrid = document.getElementById("camera-grid");
+      if (btnGridToggle && cameraGrid) {
+        btnGridToggle.onclick = () => {
+          cameraGrid.classList.toggle("opacity-0");
+        };
+      }
 
-      // 1. Text-to-Speech (Vietnamese Voice Reader)
+      // Toast Notification
+      function showToast(message, type = "info") {
+        const toast = document.getElementById("toast");
+        const toastMessage = document.getElementById("toast-message");
+        if (!toast || !toastMessage) return;
+        toastMessage.textContent = message;
+        toast.classList.remove("translate-y-24", "opacity-0");
+        toast.classList.add("translate-y-0", "opacity-100");
+        setTimeout(() => {
+          toast.classList.remove("translate-y-0", "opacity-100");
+          toast.classList.add("translate-y-24", "opacity-0");
+        }, 2500);
+      }
+
+      // Voice Reader
       function speakText(text) {
         if (!('speechSynthesis' in window)) {
           showToast("Trình duyệt không hỗ trợ đọc giọng nói", "error");
@@ -1746,46 +1662,30 @@
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "vi-VN";
         utterance.rate = 0.95;
-        utterance.pitch = 1.0;
-        
-        // Find Vietnamese voice if available
         const voices = window.speechSynthesis.getVoices();
         const viVoice = voices.find(v => v.lang.includes("vi") || v.lang.includes("VI"));
         if (viVoice) utterance.voice = viVoice;
-
         window.speechSynthesis.speak(utterance);
-        showToast("🔊 Đang đọc kết quả chẩn đoán...");
+        showToast("🔊 Đang đọc kết quả...");
       }
 
-      if (document.getElementById("btn-speak-all")) {
-        document.getElementById("btn-speak-all").addEventListener("click", () => {
+      const btnSpeakAll = document.getElementById("btn-speak-all");
+      if (btnSpeakAll) {
+        btnSpeakAll.onclick = () => {
           if (!currentDetections || currentDetections.length === 0) {
-            speakText("Chưa phát hiện chiếc lá nào trong khung hình. Vui lòng hướng camera vào tán lá hồ tiêu.");
+            speakText("Chưa phát hiện lá cây trong khung hình.");
             return;
           }
-          const total = currentDetections.length;
-          const diseased = currentDetections.filter(d => !(d.stable_disease?.label || d.disease?.label || "").toLowerCase().includes("healthy"));
-          let msg = `Phát hiện tổng cộng ${total} chiếc lá trên cây hồ tiêu. `;
-          if (diseased.length === 0) {
-            msg += "Tất cả các lá đều khỏe mạnh, tán lá phát triển rất tốt.";
-          } else {
-            msg += `Trong đó có ${diseased.length} lá có dấu hiệu bệnh. `;
-            diseased.forEach((d, i) => {
-              const label = formatLabel(d.stable_disease?.label || d.disease?.label);
-              const conf = ((d.stable_disease?.confidence || d.disease?.confidence || 0) * 100).toFixed(0);
-              msg += `Lá số ${i + 1}: ${label}, độ tin cậy ${conf} phần trăm. `;
-            });
-            const firstKey = (diseased[0].stable_disease?.label || diseased[0].disease?.label || "").toLowerCase().replace(/_/g, " ").trim();
-            const remedy = REMEDIES[firstKey];
-            if (remedy) {
-              msg += `Khuyến nghị xử lý: ${remedy.remedy}`;
-            }
-          }
+          let msg = `Phát hiện ${currentDetections.length} chiếc lá. `;
+          currentDetections.forEach((d, i) => {
+            const rawLabel = d.stable_disease?.label || d.disease?.label;
+            msg += `Lá ${i+1}: ${formatLabel(rawLabel)}. `;
+          });
           speakText(msg);
-        });
+        };
       }
 
-      // 2. Update Garden Health Score Meter
+      // Health Meter
       function updateHealthMeter(detections) {
         const total = detections.length;
         const healthBadge = document.getElementById("health-status-badge");
@@ -1818,141 +1718,102 @@
             healthBadge.textContent = `Cần xử lý (${healthyPct}%)`;
           } else {
             healthBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300";
-            healthBadge.textContent = `Báo động dịch (${healthyPct}%)`;
+            healthBadge.textContent = `Báo động (${healthyPct}%)`;
           }
         }
       }
 
-      // 3. Pesticide Dosage Calculator Logic
+      // Pesticide Dosage Calculator Modal
       const DOSAGE_DATABASE = {
-        footrot: {
-          medicine: "Ridomil Gold 68WG (Metalaxyl-M + Mancozeb) hoặc Aliette 800WG",
-          ratePerLiter: 2.5, // 2.5g / Liter
-          waterPerTree: 3.0, // 3 Liters / tree
-          phi: "14 ngày trước thu hoạch",
-          instructions: "Hòa 500g thuốc vào phuy 200L nước. Tưới đều quanh gốc 3-4 lít/trụ kết hợp phun ướt đều tán lá. Xử lý 2 lần cách nhau 15 ngày."
-        },
-        slow_decline: {
-          medicine: "Velum Prime 400SC (Fluopyram) hoặc Tervigo 020SC (Abamectin)",
-          ratePerLiter: 1.0, // 1ml / Liter
-          waterPerTree: 2.5,
-          phi: "21 ngày trước thu hoạch",
-          instructions: "Pha 200ml thuốc cho phuy 200L nước. Tưới đều gốc khi đất ẩm. Sau 7 ngày bón bổ sung phân hữu cơ vi sinh ủ nấm đối kháng Trichoderma."
-        },
-        pollu_disease: {
-          medicine: "Amistar Top 325SC (Azoxystrobin + Difenoconazole) hoặc Antracol 70WP",
-          ratePerLiter: 1.25,
-          waterPerTree: 1.5,
-          phi: "7 ngày trước thu hoạch",
-          instructions: "Pha 250ml thuốc cho phuy 200L nước. Phun ướt đẫm 2 mặt lá và các chùm quả khi phát hiện vết bệnh đầu tiên."
-        },
-        yellow_mottle_virus: {
-          medicine: "Confidor 200SL hoặc Movento 150OD (Diệt rầy mềm, rệp sáp môi giới)",
-          ratePerLiter: 0.75,
-          waterPerTree: 1.5,
-          phi: "7 ngày trước thu hoạch",
-          instructions: "Bệnh do virus: Không có thuốc diệt trực tiếp virus. Phun thuốc diệt côn trùng chích hút môi giới truyền bệnh. Tiêu hủy cây bệnh nặng."
-        },
-        leaf_blight: {
-          medicine: "Coc85 (Copper Oxychloride) hoặc Anvil 5SC (Hexaconazole)",
-          ratePerLiter: 2.0,
-          waterPerTree: 1.5,
-          phi: "14 ngày trước thu hoạch",
-          instructions: "Pha 400g Coc85 cho phuy 200L nước. Phun phòng trừ tán dưới sát mặt đất sau các đợt mưa kéo dài."
-        }
+        footrot: { medicine: "Ridomil Gold 68WG hoặc Aliette 800WG", ratePerLiter: 2.5, waterPerTree: 3.0, phi: "14 ngày", instructions: "Hòa 500g thuốc vào phuy 200L nước. Tưới đều quanh gốc 3-4 lít/trụ kết hợp phun ướt đều tán lá." },
+        slow_decline: { medicine: "Velum Prime 400SC hoặc Tervigo 020SC", ratePerLiter: 1.0, waterPerTree: 2.5, phi: "21 ngày", instructions: "Pha 200ml thuốc cho phuy 200L nước. Tưới đều gốc khi đất ẩm. Bón phân hữu cơ vi sinh ủ Trichoderma." },
+        pollu_disease: { medicine: "Amistar Top 325SC hoặc Antracol 70WP", ratePerLiter: 1.25, waterPerTree: 1.5, phi: "7 ngày", instructions: "Pha 250ml thuốc cho phuy 200L nước. Phun ướt đẫm 2 mặt lá và chùm quả." },
+        yellow_mottle_virus: { medicine: "Confidor 200SL hoặc Movento 150OD", ratePerLiter: 0.75, waterPerTree: 1.5, phi: "7 ngày", instructions: "Phun thuốc diệt côn trùng chích hút môi giới truyền bệnh. Tiêu hủy cây bệnh nặng." },
+        leaf_blight: { medicine: "Coc85 hoặc Anvil 5SC", ratePerLiter: 2.0, waterPerTree: 1.5, phi: "14 ngày", instructions: "Pha 400g Coc85 cho phuy 200L nước. Phun phòng trừ tán dưới sau các đợt mưa kéo dài." }
       };
 
       function updateDosageCalculation() {
-        const diseaseKey = document.getElementById("calc-disease-select").value;
-        const numTrees = parseInt(document.getElementById("calc-num-trees").value) || 200;
-        const tankSize = parseInt(document.getElementById("calc-tank-size").value) || 200;
+        const sel = document.getElementById("calc-disease-select");
+        const numTreesEl = document.getElementById("calc-num-trees");
+        const tankSizeEl = document.getElementById("calc-tank-size");
         const outputEl = document.getElementById("calc-output-text");
+        if (!sel || !numTreesEl || !tankSizeEl || !outputEl) return;
 
+        const diseaseKey = sel.value;
+        const numTrees = parseInt(numTreesEl.value) || 200;
+        const tankSize = parseInt(tankSizeEl.value) || 200;
         const data = DOSAGE_DATABASE[diseaseKey] || DOSAGE_DATABASE.footrot;
+
         const totalWaterNeeded = Math.round(numTrees * data.waterPerTree);
-        const totalTanksNeeded = (totalWaterNeeded / tankSize).toFixed(1);
         const medicinePerTank = Math.round(tankSize * data.ratePerLiter);
         const totalMedicineNeeded = Math.round(totalWaterNeeded * data.ratePerLiter);
 
         outputEl.innerHTML = `
           <p><strong>💊 Thuốc đặc trị:</strong> <span class="text-pastel-greenDark font-bold">${data.medicine}</span></p>
-          <p><strong>💧 Nhu cầu nước:</strong> ~${totalWaterNeeded} Lít (~${totalTanksNeeded} bình/phuy ${tankSize}L) cho ${numTrees} trụ tiêu.</p>
-          <p><strong>⚖️ Liều lượng pha:</strong> <strong>${medicinePerTank} g (hoặc ml)</strong> thuốc cho mỗi bình/phuy ${tankSize}L (tỷ lệ ${data.ratePerLiter}g/L nước).</p>
-          <p><strong>📦 Tổng lượng thuốc:</strong> <strong>${totalMedicineNeeded} g (hoặc ml)</strong> cho toàn bộ ${numTrees} trụ tiêu.</p>
+          <p><strong>💧 Nhu cầu nước:</strong> ~${totalWaterNeeded} Lít cho ${numTrees} trụ tiêu.</p>
+          <p><strong>⚖️ Liều lượng pha:</strong> <strong>${medicinePerTank} g (hoặc ml)</strong> cho mỗi bình/phuy ${tankSize}L.</p>
+          <p><strong>📦 Tổng lượng thuốc:</strong> <strong>${totalMedicineNeeded} g (hoặc ml)</strong> cho toàn vườn.</p>
           <p><strong>⏱️ Thời gian cách ly (PHI):</strong> ${data.phi}.</p>
           <p class="text-[11px] text-zinc-500 mt-1 border-t border-pastel-border pt-1"><strong>📝 Hướng dẫn:</strong> ${data.instructions}</p>
         `;
       }
 
-      // Dosage Modal Toggles
       const modalDosage = document.getElementById("modal-dosage");
       if (document.getElementById("btn-open-dosage-modal")) {
-        document.getElementById("btn-open-dosage-modal").addEventListener("click", () => {
+        document.getElementById("btn-open-dosage-modal").onclick = () => {
           updateDosageCalculation();
           modalDosage.classList.remove("hidden");
-          setTimeout(() => {
-            modalDosage.classList.remove("opacity-0");
-            modalDosage.firstElementChild.classList.remove("scale-95");
-          }, 10);
-        });
+          setTimeout(() => { modalDosage.classList.remove("opacity-0"); }, 10);
+        };
       }
-
       if (document.getElementById("btn-close-dosage-modal")) {
-        document.getElementById("btn-close-dosage-modal").addEventListener("click", () => {
+        document.getElementById("btn-close-dosage-modal").onclick = () => {
           modalDosage.classList.add("opacity-0");
-          modalDosage.firstElementChild.classList.add("scale-95");
           setTimeout(() => modalDosage.classList.add("hidden"), 200);
-        });
+        };
       }
-
       if (document.getElementById("calc-disease-select")) {
-        document.getElementById("calc-disease-select").addEventListener("change", updateDosageCalculation);
-        document.getElementById("calc-num-trees").addEventListener("input", updateDosageCalculation);
-        document.getElementById("calc-tank-size").addEventListener("change", updateDosageCalculation);
+        document.getElementById("calc-disease-select").onchange = updateDosageCalculation;
+        document.getElementById("calc-num-trees").oninput = updateDosageCalculation;
+        document.getElementById("calc-tank-size").onchange = updateDosageCalculation;
       }
-
       if (document.getElementById("btn-apply-dosage")) {
-        document.getElementById("btn-apply-dosage").addEventListener("click", () => {
+        document.getElementById("btn-apply-dosage").onclick = () => {
           document.getElementById("btn-close-dosage-modal").click();
-          showToast("Đã lưu phác đồ pha thuốc vào sổ tay", "success");
-        });
+          showToast("Đã lưu phác đồ pha thuốc", "success");
+        };
       }
 
-      // 4. Diagnostic Report Export & Print Modal
+      // Report Modal
       const modalReport = document.getElementById("modal-report");
       if (document.getElementById("btn-export-report")) {
-        document.getElementById("btn-export-report").addEventListener("click", () => {
+        document.getElementById("btn-export-report").onclick = () => {
           populateReportCard();
           modalReport.classList.remove("hidden");
-          setTimeout(() => {
-            modalReport.classList.remove("opacity-0");
-            modalReport.firstElementChild.classList.remove("scale-95");
-          }, 10);
-        });
+          setTimeout(() => { modalReport.classList.remove("opacity-0"); }, 10);
+        };
       }
-
       if (document.getElementById("btn-close-report-modal")) {
-        document.getElementById("btn-close-report-modal").addEventListener("click", () => {
+        document.getElementById("btn-close-report-modal").onclick = () => {
           modalReport.classList.add("opacity-0");
-          modalReport.firstElementChild.classList.add("scale-95");
           setTimeout(() => modalReport.classList.add("hidden"), 200);
-        });
+        };
       }
-
       function populateReportCard() {
         const now = new Date();
-        document.getElementById("report-timestamp").textContent = `Ngày khám: ${now.toLocaleDateString("vi-VN")} ${now.toLocaleTimeString("vi-VN")} | Máy phân tích AI: LeafyCare v2.0`;
-        
+        const ts = document.getElementById("report-timestamp");
+        if (ts) ts.textContent = `Ngày khám: ${now.toLocaleDateString("vi-VN")} ${now.toLocaleTimeString("vi-VN")} | Máy phân tích AI: LeafyCare v2.0`;
         const total = currentDetections.length;
         const healthy = currentDetections.filter(d => (d.stable_disease?.label || d.disease?.label || "").toLowerCase().includes("healthy")).length;
         const diseased = total - healthy;
 
-        document.getElementById("report-total-leaves").textContent = total;
-        document.getElementById("report-healthy-leaves").textContent = healthy;
-        document.getElementById("report-diseased-leaves").textContent = diseased;
+        if (document.getElementById("report-total-leaves")) document.getElementById("report-total-leaves").textContent = total;
+        if (document.getElementById("report-healthy-leaves")) document.getElementById("report-healthy-leaves").textContent = healthy;
+        if (document.getElementById("report-diseased-leaves")) document.getElementById("report-diseased-leaves").textContent = diseased;
 
         const tbody = document.getElementById("report-table-body");
         const prescripBox = document.getElementById("report-prescriptions");
+        if (!tbody || !prescripBox) return;
         tbody.innerHTML = "";
         prescripBox.innerHTML = "";
 
@@ -1964,7 +1825,7 @@
 
         const uniqueDiseases = new Set();
         currentDetections.forEach((d, idx) => {
-          const id = d._assignedId || d.track_id || (idx + 1);
+          const id = d._assignedId || (idx + 1);
           const rawLabel = d.stable_disease?.label || d.disease?.label || "healthy";
           const label = formatLabel(rawLabel);
           const conf = ((d.stable_disease?.confidence || d.disease?.confidence || 0) * 100).toFixed(0);
@@ -1986,7 +1847,7 @@
         });
 
         if (uniqueDiseases.size === 0) {
-          prescripBox.innerHTML = `<p class="text-emerald-700 font-semibold">✅ Toàn bộ lá kiểm tra đều đạt chuẩn khỏe mạnh. Không cần phun thuốc hóa học. Tiếp tục duy trì chế độ phân bón hữu cơ và kiểm tra định kỳ 2 tuần/lần.</p>`;
+          prescripBox.innerHTML = `<p class="text-emerald-700 font-semibold">✅ Toàn bộ lá kiểm tra đều đạt chuẩn khỏe mạnh. Tiếp tục duy trì chế độ chăm sóc định kỳ.</p>`;
         } else {
           uniqueDiseases.forEach(key => {
             const remedy = REMEDIES[key];
@@ -2003,38 +1864,38 @@
         }
       }
 
-      // Print Action
       if (document.getElementById("btn-print-report-action")) {
-        document.getElementById("btn-print-report-action").addEventListener("click", () => {
-          window.print();
-        });
+        document.getElementById("btn-print-report-action").onclick = () => window.print();
       }
 
-      // Hook updateHealthMeter into renderReports
-
-    
-
-      // Mode 3: Upload Action Listeners
-      if (document.getElementById("btn-upload-another")) {
-        document.getElementById("btn-upload-another").onclick = () => fileInput.click();
+      // Initialize Settings
+      let savedWsUrl = localStorage.getItem("leafsense_ws_url");
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        if (!savedWsUrl || savedWsUrl.includes("localhost") || savedWsUrl.includes("127.0.0.1")) {
+          savedWsUrl = "wss://thienphuc12339-leaf.hf.space/ws/detect";
+          localStorage.setItem("leafsense_ws_url", savedWsUrl);
+        }
       }
-      if (document.getElementById("btn-upload-demo-bar")) {
-        document.getElementById("btn-upload-demo-bar").onclick = () => btnDemoFile.click();
-      }
-      if (document.getElementById("btn-download-upload-result")) {
-        document.getElementById("btn-download-upload-result").onclick = () => {
-          if (!overlay || overlay.width === 0) {
-            showToast("Chưa có ảnh kết quả để tải", "error");
-            return;
-          }
-          const link = document.createElement("a");
-          link.download = `leaf_diagnosis_${Date.now()}.jpg`;
-          link.href = overlay.toDataURL("image/jpeg", 0.95);
-          link.click();
-          showToast("Đã tải ảnh kết quả về máy", "success");
-        };
+      if (savedWsUrl && inputWsUrl) {
+        inputWsUrl.value = savedWsUrl;
+      } else if (inputWsUrl) {
+        inputWsUrl.value = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+          ? `ws://${window.location.host}/ws/detect` 
+          : "wss://thienphuc12339-leaf.hf.space/ws/detect";
       }
 
+      // Slider Listeners
+      if (sliderQuality && labelQuality) {
+        sliderQuality.oninput = (e) => { labelQuality.textContent = `${e.target.value}%`; };
+      }
+      if (sliderDetectorConf && labelDetectorConf) {
+        sliderDetectorConf.oninput = (e) => { labelDetectorConf.textContent = `${e.target.value}%`; };
+      }
+      if (sliderClassifierConf && labelClassifierConf) {
+        sliderClassifierConf.oninput = (e) => { labelClassifierConf.textContent = `${e.target.value}%`; };
+      }
+
+      if (window.lucide) lucide.createIcons();
     </script>
   
     <!-- Modal 1: Smart Pesticide Dosage Calculator Modal -->
