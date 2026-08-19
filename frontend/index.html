@@ -326,6 +326,27 @@
                 <i data-lucide="minimize" class="w-4 h-4 hidden" id="icon-theater-collapse"></i>
               </button>
             </div>
+
+              <!-- Floating Mobile Quick Action Dock (bottom-center) -->
+              <div id="mobile-quick-dock" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-2xl border-2 border-pastel-border shadow-lg z-20 transition-all select-none">
+                <button id="btn-flip-camera" class="p-2 rounded-xl text-zinc-700 hover:text-pastel-green hover:bg-pastel-greenLight active:scale-90 transition-all flex items-center justify-center cursor-pointer" title="Lật Camera (Trước / Sau)">
+                  <i data-lucide="switch-camera" class="w-4 h-4"></i>
+                </button>
+                <button id="btn-toggle-torch" class="p-2 rounded-xl text-zinc-700 hover:text-amber-500 hover:bg-amber-50 active:scale-90 transition-all flex items-center justify-center cursor-pointer hidden" title="Bật/Tắt Đèn Flash Trợ Sáng">
+                  <i data-lucide="zap" class="w-4 h-4" id="icon-torch-on"></i>
+                </button>
+                <button id="btn-freeze-hud" class="p-2 rounded-xl text-zinc-700 hover:text-pastel-green hover:bg-pastel-greenLight active:scale-90 transition-all flex items-center justify-center cursor-pointer" title="Đóng Băng Khung Hình (Freeze/Pause)">
+                  <i data-lucide="snowflake" class="w-4 h-4" id="icon-freeze"></i>
+                </button>
+                <button id="btn-toggle-haptic" class="p-2 rounded-xl text-pastel-green bg-pastel-greenLight active:scale-90 transition-all flex items-center justify-center cursor-pointer" title="Rung Phản Hồi Khi Nhận Diện">
+                  <i data-lucide="smartphone" class="w-4 h-4"></i>
+                </button>
+                <div class="h-4 w-[1px] bg-zinc-200"></div>
+                <button id="btn-quick-summary-pill" class="px-2.5 py-1 rounded-xl bg-pastel-green text-white font-bold text-[11px] flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-sm">
+                  <span id="quick-summary-text">0 lá</span>
+                  <i data-lucide="chevron-up" class="w-3 h-3"></i>
+                </button>
+              </div>
             
             <!-- Quick Settings Dropdown Overlay inside Viewport -->
             <div id="quick-settings-drawer" class="absolute top-16 right-4 z-30 w-72 glass-panel-intense border-4 border-pastel-border rounded-3xl p-4 shadow-xl flex flex-col gap-4 transform -translate-y-4 opacity-0 pointer-events-none transition-all duration-300">
@@ -614,7 +635,21 @@
       const targetList = document.getElementById("target-list");
       const targetEmptyState = document.getElementById("target-empty-state");
       
-      const btnTheaterToggle = document.getElementById("btn-theater-toggle");
+      const btnFlipCamera = document.getElementById("btn-flip-camera");
+        const btnToggleTorch = document.getElementById("btn-toggle-torch");
+        const btnFreezeHud = document.getElementById("btn-freeze-hud");
+        const btnToggleHaptic = document.getElementById("btn-toggle-haptic");
+        const btnQuickSummaryPill = document.getElementById("btn-quick-summary-pill");
+        const quickSummaryText = document.getElementById("quick-summary-text");
+        
+        let currentFacingMode = "environment";
+        let isTorchOn = false;
+        let isHudFrozen = false;
+        let isHapticEnabled = true;
+        let lastDetectedCount = 0;
+        let lastTrackIds = new Set();
+        
+        const btnTheaterToggle = document.getElementById("btn-theater-toggle");
       const iconTheaterExpand = document.getElementById("icon-theater-expand");
       const iconTheaterCollapse = document.getElementById("icon-theater-collapse");
       const leftPanel = document.getElementById("left-panel");
@@ -909,26 +944,32 @@
       const LABEL_VIETNAMESE_MAP = {
         'black_pepper_healthy': 'Lá tiêu khỏe mạnh',
         'black pepper healthy': 'Lá tiêu khỏe mạnh',
-        'healthy': 'Lá khỏe mạnh',
-        'slow-decline': 'Bệnh chết chậm',
-        'slow decline': 'Bệnh chết chậm',
-        'slow_decline': 'Bệnh chết chậm',
+        'healthy': 'Lá tiêu khỏe mạnh',
+        'black_pepper_footrot': 'Bệnh chết nhanh (Thối gốc)',
+        'black pepper footrot': 'Bệnh chết nhanh (Thối gốc)',
         'footrot': 'Bệnh chết nhanh (Thối gốc)',
         'foot rot': 'Bệnh chết nhanh (Thối gốc)',
         'foot_rot': 'Bệnh chết nhanh (Thối gốc)',
+        'black_pepper_slow_decline': 'Bệnh chết chậm (Tuyến trùng)',
+        'black pepper slow decline': 'Bệnh chết chậm (Tuyến trùng)',
+        'slow-decline': 'Bệnh chết chậm (Tuyến trùng)',
+        'slow decline': 'Bệnh chết chậm (Tuyến trùng)',
+        'slow_decline': 'Bệnh chết chậm (Tuyến trùng)',
+        'black_pepper_pollu_disease': 'Bệnh thán thư (Pollu)',
+        'black pepper pollu disease': 'Bệnh thán thư (Pollu)',
         'pollu_disease': 'Bệnh thán thư (Pollu)',
         'pollu disease': 'Bệnh thán thư (Pollu)',
         'pollu': 'Bệnh thán thư (Pollu)',
         'black_pepper_yellow_mottle_virus': 'Bệnh khảm vàng lá (Virus)',
         'black pepper yellow mottle virus': 'Bệnh khảm vàng lá (Virus)',
         'yellow mottle virus': 'Bệnh khảm vàng lá (Virus)',
+        'black_pepper_leaf_blight': 'Bệnh cháy lá (Leaf Blight)',
+        'black pepper leaf blight': 'Bệnh cháy lá (Leaf Blight)',
+        'leaf_blight': 'Bệnh cháy lá (Leaf Blight)',
+        'leaf blight': 'Bệnh cháy lá (Leaf Blight)',
         'leaf spot': 'Bệnh đốm lá',
         'powdery mildew': 'Bệnh phấn trắng',
-        'rust': 'Bệnh rỉ sắt',
-        'early blight': 'Bệnh đốm sớm',
-        'late blight': 'Bệnh sương mai',
-        'yellow leaf curl': 'Bệnh xoăn vàng lá',
-        'mosaic virus': 'Bệnh virus khảm'
+        'rust': 'Bệnh rỉ sắt'
       };
 
       function formatLabel(label) {
@@ -1054,7 +1095,9 @@
           const deviceId = selectCamera.value;
           const constraints = {
             audio: false,
-            video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" }
+            video: deviceId 
+              ? { deviceId: { exact: deviceId } } 
+              : { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
           };
 
           stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -1063,6 +1106,7 @@
           await new Promise((resolve) => {
             video.onloadedmetadata = () => {
               video.play();
+              checkTorchSupport();
               resolve();
             };
           });
@@ -1438,61 +1482,115 @@
 
       // Comprehensive Vietnamese Remedies & Treatment Suggestions Database
       const REMEDIES = {
+        'black pepper footrot': {
+          title: 'Bệnh Chết Nhanh (Thối Gốc Rễ)',
+          pathogen: 'Nấm Phytophthora capsici',
+          symptoms: 'Lá héo rũ nhanh, cuống lá thối đen, rụng đồng loạt khi lá còn xanh, cổ rễ và thân thối nhũn có mùi hôi chua.',
+          remedy: 'Xử lý ngay: (1) Đào rãnh thoát nước, cách ly cây bệnh; (2) Tưới gốc & phun tán bằng Metalaxyl + Mancozeb (Ridomil Gold 68WG) hoặc Fosetyl-Aluminium (Aliette 800WG); (3) Rải vôi bột khử trùng quanh gốc và bổ sung chế phẩm nấm đối kháng Trichoderma.',
+          tag: 'Cực kỳ nguy hiểm',
+          color: 'text-rose-600',
+          badgeBg: 'bg-rose-100 text-rose-800 border-rose-300'
+        },
+        'footrot': {
+          title: 'Bệnh Chết Nhanh (Thối Gốc Rễ)',
+          pathogen: 'Nấm Phytophthora capsici',
+          symptoms: 'Lá héo rũ nhanh, cuống lá thối đen, rụng đồng loạt khi lá còn xanh, cổ rễ và thân thối nhũn.',
+          remedy: 'Tưới gốc bằng Ridomil Gold 68WG hoặc Aliette 800WG, thoát nước tốt mùa mưa, bón vôi và nấm Trichoderma.',
+          tag: 'Cực kỳ nguy hiểm',
+          color: 'text-rose-600',
+          badgeBg: 'bg-rose-100 text-rose-800 border-rose-300'
+        },
+        'black pepper slow decline': {
+          title: 'Bệnh Chết Chậm (Tuyến Trùng & Nấm)',
+          pathogen: 'Tuyến trùng Meloidogyne incognita + Nấm Fusarium / Rhizoctonia',
+          symptoms: 'Lá vàng từ từ từ dưới gốc lên ngọn, gân lá úa vàng, rễ có các nốt sần u bướu và thối rễ tơ, cây còi cọc rụng lá.',
+          remedy: 'Biện pháp phục hồi: (1) Tưới thuốc diệt tuyến trùng Fluopyram (Velum Prime 400SC) hoặc Abamectin (Tervigo 020SC); (2) Tưới nấm đối kháng Paecilomyces lilacinus kết hợp Trichoderma; (3) Bón phân hữu cơ hoai mục, humic kích rễ mới.',
+          tag: 'Bệnh mãn tính',
+          color: 'text-amber-600',
+          badgeBg: 'bg-amber-100 text-amber-800 border-amber-300'
+        },
+        'slow decline': {
+          title: 'Bệnh Chết Chậm (Tuyến Trùng & Nấm)',
+          pathogen: 'Tuyến trùng Meloidogyne + Nấm Fusarium',
+          symptoms: 'Lá vàng dần từ dưới lên, rễ có nốt sần u bướu, cây sinh trưởng còi cọc.',
+          remedy: 'Tưới thuốc đặc trị tuyến trùng Tervigo hoặc Velum Prime, bổ sung hữu cơ vi sinh và Trichoderma.',
+          tag: 'Bệnh mãn tính',
+          color: 'text-amber-600',
+          badgeBg: 'bg-amber-100 text-amber-800 border-amber-300'
+        },
+        'black pepper pollu disease': {
+          title: 'Bệnh Thán Thư (Pollu Disease)',
+          pathogen: 'Nấm Colletotrichum gloeosporioides',
+          symptoms: 'Vết đốm hình tròn hoặc bất định màu nâu xám, mép có quầng vàng, tâm vết bệnh hoại tử khô rách lá, chùm quả bị rụng thâm đen.',
+          remedy: 'Kiểm soát: (1) Cắt tỉa cành thông thoáng, dọn sạch tàn dư lá rụng; (2) Phun thuốc trừ nấm Amistar Top 325SC (Azoxystrobin + Difenoconazole), Score 250EC hoặc Antracol 70WP; (3) Phun 2 lần cách nhau 7-10 ngày khi phát hiện vết bệnh đầu tiên.',
+          tag: 'Lây lan nhanh',
+          color: 'text-orange-600',
+          badgeBg: 'bg-orange-100 text-orange-800 border-orange-300'
+        },
+        'pollu disease': {
+          title: 'Bệnh Thán Thư (Pollu Disease)',
+          pathogen: 'Nấm Colletotrichum gloeosporioides',
+          symptoms: 'Đốm hoại tử khô màu nâu đen có quầng vàng, làm khô thủng phiến lá.',
+          remedy: 'Tỉa cành thông thoáng, phun Amistar Top 325SC hoặc Antracol 70WP.',
+          tag: 'Lây lan nhanh',
+          color: 'text-orange-600',
+          badgeBg: 'bg-orange-100 text-orange-800 border-orange-300'
+        },
+        'black pepper yellow mottle virus': {
+          title: 'Bệnh Khảm Vàng Lá Virus',
+          pathogen: 'Piper Yellow Mottle Virus (PYMoV) & CMV',
+          symptoms: 'Phiến lá xuất hiện các vệt loang lổ sọc vàng xanh xen kẽ, lá biến dạng cong queo gợn sóng, đọt non ngắn lại.',
+          remedy: 'Quản lý lây nhiễm: (1) Bệnh do virus không có thuốc hóa học trị khỏi hoàn toàn; (2) Tiêu hủy hoặc cách ly trụ bệnh nặng tránh lây lan; (3) Phun thuốc diệt rầy mềm, rệp sáp môi giới truyền virus (Confidor 200SL, Movento 150OD); (4) Khử trùng dao kéo cắt tỉa bằng cồn 70 độ.',
+          tag: 'Virus lây truyền',
+          color: 'text-yellow-600',
+          badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-300'
+        },
+        'yellow mottle virus': {
+          title: 'Bệnh Khảm Vàng Lá Virus',
+          pathogen: 'Virus PYMoV / CMV',
+          symptoms: 'Lá khảm loang lổ vàng xanh, phiến lá nhăn nheo biến dạng.',
+          remedy: 'Phun trừ rệp sáp, rầy mềm môi giới truyền bệnh (Movento, Confidor), cách ly cây bệnh.',
+          tag: 'Virus lây truyền',
+          color: 'text-yellow-600',
+          badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-300'
+        },
+        'black pepper leaf blight': {
+          title: 'Bệnh Cháy Lá (Leaf Blight)',
+          pathogen: 'Nấm Phomopsis / Corticium salmonicolor',
+          symptoms: 'Các mảng cháy khô loang lổ màu nâu sẫm lan dần từ mép lá vào gân chính, mặt dưới có thể xuất hiện mạng sợi nấm trắng/hồng nhạt.',
+          remedy: 'Khắc phục: (1) Cắt tỉa bớt tán lá rậm rạp ở tầng gốc sát mặt đất; (2) Phun thuốc gốc đồng Copper Oxychloride (Coc85), Champion 77WP hoặc Hexaconazole (Anvil 5SC); (3) Tránh tưới nước đọng trực tiếp lên lá vào chiều muộn.',
+          tag: 'Cần xử lý sớm',
+          color: 'text-red-600',
+          badgeBg: 'bg-red-100 text-red-800 border-red-300'
+        },
+        'leaf blight': {
+          title: 'Bệnh Cháy Lá (Leaf Blight)',
+          pathogen: 'Nấm Phomopsis / Corticium',
+          symptoms: 'Mảng cháy xém khô giòn lan rộng từ mép lá.',
+          remedy: 'Cắt tỉa lá sát gốc, phun thuốc gốc đồng Coc85 hoặc Anvil 5SC.',
+          tag: 'Cần xử lý sớm',
+          color: 'text-red-600',
+          badgeBg: 'bg-red-100 text-red-800 border-red-300'
+        },
         'black pepper healthy': {
           title: 'Lá Hồ Tiêu Khỏe Mạnh',
-          remedy: 'Cây sinh trưởng tốt, tán lá xanh khỏe và không có dấu hiệu nấm bệnh. Duy trì tưới tiêu điều độ, bón phân cân đối và kiểm tra định kỳ.',
+          pathogen: 'Không có mầm bệnh',
+          symptoms: 'Phiến lá xanh mướt, dày bóng, cân đối, không có vết tổn thương hay đốm nấm.',
+          remedy: 'Tiếp tục duy trì chế độ canh tác hữu cơ bền vững: Bón phân NPK cân đối theo mùa, bổ sung trung vi lượng (Ca, Mg, Zn, Bo), tưới đủ ẩm và thăm vườn định kỳ 1-2 lần/tuần.',
           tag: 'Khỏe mạnh',
-          color: 'text-pastel-greenDark'
+          color: 'text-pastel-greenDark',
+          badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300'
         },
         'healthy': {
           title: 'Lá Cây Khỏe Mạnh',
-          remedy: 'Tán lá xanh tươi, quang hợp tốt. Tiếp tục chế độ chăm sóc và tưới nước định kỳ.',
+          pathogen: 'Không có mầm bệnh',
+          symptoms: 'Tán lá xanh tươi, quang hợp tốt.',
+          remedy: 'Duy trì chế độ chăm sóc, bón phân cân đối và tưới tiêu hợp lý.',
           tag: 'Khỏe mạnh',
-          color: 'text-pastel-greenDark'
-        },
-        'slow decline': {
-          title: 'Bệnh Chết Chậm (Tuyến trùng & Nấm rễ)',
-          remedy: 'Lá vàng úa từ từ từ dưới lên rồi rụng, rễ tơ bị thối nốt sần. Biện pháp: Xử lý tuyến trùng bằng chế phẩm sinh học (Trichoderma, Paecilomyces), xới nhẹ đất quanh tán, bón phân hữu cơ hoai mục và tạo rãnh thoát nước chống ngập úng.',
-          tag: 'Cảnh báo',
-          color: 'text-amber-600 font-bold'
-        },
-        'slow-decline': {
-          title: 'Bệnh Chết Chậm (Tuyến trùng & Nấm rễ)',
-          remedy: 'Lá vàng úa từ từ từ dưới lên rồi rụng, rễ tơ bị thối nốt sần. Biện pháp: Xử lý tuyến trùng bằng chế phẩm sinh học (Trichoderma, Paecilomyces), xới nhẹ đất quanh tán, bón phân hữu cơ hoai mục và tạo rãnh thoát nước chống ngập úng.',
-          tag: 'Cảnh báo',
-          color: 'text-amber-600 font-bold'
-        },
-        'footrot': {
-          title: 'Bệnh Chết Nhanh (Thối Gốc do Phytophthora)',
-          remedy: 'Bệnh bùng phát mạnh trong mùa mưa, lá thâm đen rũ xuống rất nhanh và rụng hàng loạt. Biện pháp: Đào rãnh thoát nước ngay, cắt tỉa cành sát mặt đất. Phun và tưới gốc thuốc trừ nấm (Metalaxyl, Mancozeb, Fosetyl-Aluminium, gốc đồng) 2-3 lần cách nhau 7-10 ngày.',
-          tag: 'Nguy hiểm',
-          color: 'text-rose-600 font-bold'
-        },
-        'foot rot': {
-          title: 'Bệnh Chết Nhanh (Thối Gốc do Phytophthora)',
-          remedy: 'Bệnh bùng phát mạnh trong mùa mưa, lá thâm đen rũ xuống rất nhanh và rụng hàng loạt. Biện pháp: Đào rãnh thoát nước ngay, cắt tỉa cành sát mặt đất. Phun và tưới gốc thuốc trừ nấm (Metalaxyl, Mancozeb, Fosetyl-Aluminium, gốc đồng) 2-3 lần cách nhau 7-10 ngày.',
-          tag: 'Nguy hiểm',
-          color: 'text-rose-600 font-bold'
-        },
-        'pollu disease': {
-          title: 'Bệnh Thán Thư / Bệnh Pollu (Colletotrichum)',
-          remedy: 'Xuất hiện đốm tròn màu nâu có quầng vàng trên lá, làm thối chùm quả non. Biện pháp: Vệ sinh thu gom lá bệnh tiêu hủy. Tỉa cành cây che bóng cho vườn thông thoáng. Phun thuốc trừ nấm gốc đồng, Azoxystrobin hoặc Difenoconazole khi bệnh chớm xuất hiện.',
-          tag: 'Cần xử lý',
-          color: 'text-rose-500 font-bold'
-        },
-        'black pepper yellow mottle virus': {
-          title: 'Bệnh Khảm Vàng Lá (Virus PYMV)',
-          remedy: 'Lá nhỏ, phiến lá biến dạng gồ ghề và có vệt khảm vàng loang lổ. Biện pháp: Không có thuốc chữa virus đặc trị; cần diệt trừ rệp sáp, rầy mềm (vật trung gian truyền bệnh) bằng dầu khoáng/thuốc sinh học, nhổ bỏ và tiêu hủy các cây bệnh nặng tránh lây lan.',
-          tag: 'Virus',
-          color: 'text-purple-600 font-bold'
-        },
-        'leaf spot': {
-          title: 'Bệnh Đốm Lá',
-          remedy: 'Cắt bỏ ngay lá bệnh. Tránh tưới nước trực tiếp lên mặt lá. Phun thuốc bảo vệ thực vật gốc đồng nếu có dấu hiệu lan rộng.',
-          tag: 'Bệnh lá',
-          color: 'text-rose-400 font-bold'
+          color: 'text-pastel-greenDark',
+          badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300'
         }
-      };
+      }
 
       // Render diagnosis cards
       function updateTrackedCardContainer(detections) {
