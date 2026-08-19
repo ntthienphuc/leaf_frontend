@@ -895,25 +895,27 @@
         }, 3000);
       }
 
-      // Populate connected webcams
+      // Safe Camera Devices Enumeration
       async function setupCameraSelection() {
-        try {
-          const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
-          tempStream.getTracks().forEach(track => track.stop());
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          selectCamera.innerHTML = '<option value="">Camera API unsupported</option>';
+          return;
+        }
 
+        try {
           const devices = await navigator.mediaDevices.enumerateDevices();
           const videoDevices = devices.filter(device => device.kind === "videoinput");
           
           selectCamera.innerHTML = "";
           if (videoDevices.length === 0) {
-            selectCamera.innerHTML = '<option value="">No camera detected</option>';
+            selectCamera.innerHTML = '<option value="">Default Camera</option>';
             return;
           }
 
           videoDevices.forEach((device, index) => {
             const option = document.createElement("option");
             option.value = device.deviceId;
-            option.textContent = device.label || `Camera ${index + 1}`;
+            option.textContent = device.label || `Camera ${index + 1} (${device.deviceId.slice(0, 5)}...)`;
             selectCamera.appendChild(option);
           });
 
@@ -922,243 +924,104 @@
             selectCamera.value = savedCamera;
           }
         } catch (error) {
-          console.error("Camera access error:", error);
-          selectCamera.innerHTML = '<option value="">Camera blocked</option>';
+          console.warn("Device enumeration note:", error);
+          selectCamera.innerHTML = '<option value="">Default Camera</option>';
         }
       }
 
       setupCameraSelection();
 
       selectCamera.onchange = () => {
-        localStorage.setItem("leafsense_camera_id", selectCamera.value);
+        if (selectCamera.value && selectCamera.value.length > 5) {
+          localStorage.setItem("leafsense_camera_id", selectCamera.value);
+        }
         if (isStreaming) {
           restartCameraStream();
         }
       };
 
-      sliderQuality.oninput = (e) => {
-        labelQuality.textContent = `${e.target.value}%`;
-      };
-      
-      sliderQuality.onchange = (e) => {
-        localStorage.setItem("leafsense_quality", e.target.value);
-      };
-
-      sliderDetectorConf.oninput = (e) => {
-        labelDetectorConf.textContent = `${e.target.value}%`;
-      };
-
-      sliderDetectorConf.onchange = (e) => {
-        localStorage.setItem("leafsense_detector_conf_v2", e.target.value);
-        sendWsConfig();
-      };
-
-      sliderClassifierConf.oninput = (e) => {
-        labelClassifierConf.textContent = `${e.target.value}%`;
-      };
-
-      sliderClassifierConf.onchange = (e) => {
-        localStorage.setItem("leafsense_classifier_conf", e.target.value);
-        sendWsConfig();
-      };
-
-      function sendWsConfig() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          const detConfVal = parseFloat(sliderDetectorConf.value) / 100.0;
-          const clsConfVal = parseFloat(sliderClassifierConf.value) / 100.0;
-          ws.send(JSON.stringify({
-            type: "config",
-            detector_conf: detConfVal,
-            classifier_conf: clsConfVal
-          }));
-        }
-      }
-
-      selectResolution.onchange = (e) => {
-        localStorage.setItem("leafsense_resolution", e.target.value);
-        if (isStreaming) {
-          restartCameraStream();
-        }
-      };
-
-      // Natural Vietnamese Disease Dictionary & Formatter
-      const LABEL_VIETNAMESE_MAP = {
-        'black_pepper_healthy': 'Lá tiêu khỏe mạnh',
-        'black pepper healthy': 'Lá tiêu khỏe mạnh',
-        'healthy': 'Lá tiêu khỏe mạnh',
-        'black_pepper_footrot': 'Bệnh chết nhanh (Thối gốc)',
-        'black pepper footrot': 'Bệnh chết nhanh (Thối gốc)',
-        'footrot': 'Bệnh chết nhanh (Thối gốc)',
-        'foot rot': 'Bệnh chết nhanh (Thối gốc)',
-        'foot_rot': 'Bệnh chết nhanh (Thối gốc)',
-        'black_pepper_slow_decline': 'Bệnh chết chậm (Tuyến trùng)',
-        'black pepper slow decline': 'Bệnh chết chậm (Tuyến trùng)',
-        'slow-decline': 'Bệnh chết chậm (Tuyến trùng)',
-        'slow decline': 'Bệnh chết chậm (Tuyến trùng)',
-        'slow_decline': 'Bệnh chết chậm (Tuyến trùng)',
-        'black_pepper_pollu_disease': 'Bệnh thán thư (Pollu)',
-        'black pepper pollu disease': 'Bệnh thán thư (Pollu)',
-        'pollu_disease': 'Bệnh thán thư (Pollu)',
-        'pollu disease': 'Bệnh thán thư (Pollu)',
-        'pollu': 'Bệnh thán thư (Pollu)',
-        'black_pepper_yellow_mottle_virus': 'Bệnh khảm vàng lá (Virus)',
-        'black pepper yellow mottle virus': 'Bệnh khảm vàng lá (Virus)',
-        'yellow mottle virus': 'Bệnh khảm vàng lá (Virus)',
-        'black_pepper_leaf_blight': 'Bệnh cháy lá (Leaf Blight)',
-        'black pepper leaf blight': 'Bệnh cháy lá (Leaf Blight)',
-        'leaf_blight': 'Bệnh cháy lá (Leaf Blight)',
-        'leaf blight': 'Bệnh cháy lá (Leaf Blight)',
-        'leaf spot': 'Bệnh đốm lá',
-        'powdery mildew': 'Bệnh phấn trắng',
-        'rust': 'Bệnh rỉ sắt'
-      };
-
-      function formatLabel(label) {
-        if (!label) return 'Chưa xác định';
-        const normalized = label.toLowerCase().replace(/_/g, ' ').trim();
-        if (LABEL_VIETNAMESE_MAP[normalized]) {
-          return LABEL_VIETNAMESE_MAP[normalized];
-        }
-        const keyNoDash = label.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ').trim();
-        if (LABEL_VIETNAMESE_MAP[keyNoDash]) {
-          return LABEL_VIETNAMESE_MAP[keyNoDash];
-        }
-        return label
-          .replace(/_/g, ' ')
-          .split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-      }
-
-      // Connection Status layout updates
-      function updateConnectionStatus(status) {
-        statusDot.className = "h-2.5 w-2.5 rounded-full";
-        statusBadge.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 text-xs font-bold transition-all duration-300";
-        
-        switch (status) {
-          case "connected":
-            statusDot.classList.add("bg-pastel-green", "status-pulse-connected");
-            statusBadge.classList.add("bg-pastel-greenLight", "text-pastel-greenDark", "border-pastel-border");
-            statusText.textContent = "Live Stream Connected";
-            break;
-          case "connecting":
-            statusDot.classList.add("bg-amber-400", "animate-pulse");
-            statusBadge.classList.add("bg-amber-50/80", "text-amber-700", "border-amber-200");
-            statusText.textContent = "Connecting...";
-            break;
-          case "disconnected":
-          default:
-            statusDot.classList.add("bg-rose-400");
-            statusBadge.classList.add("bg-rose-50", "text-rose-700", "border-rose-200");
-            statusText.textContent = "Offline";
-            break;
-        }
-      }
-
-      // Backend status checker
-      async function fetchBackendMetadata() {
-        const wsUrl = inputWsUrl.value;
-        localStorage.setItem("leafsense_ws_url", wsUrl);
-        const httpUrl = getHttpUrl(wsUrl);
-        
-        try {
-          const response = await fetch(`${httpUrl}/health`);
-          if (response.ok) {
-            const data = await response.json();
-            backendDevice.textContent = data.device || "cpu";
-          }
-        } catch (err) {
-          backendDevice.textContent = "unknown";
-        }
-      }
-
-      function getHttpUrl(wsUrl) {
-        if (window.location.origin && window.location.origin !== "null" && window.location.protocol.startsWith("http")) {
-          if (!wsUrl || wsUrl.includes(window.location.host) || !wsUrl.startsWith("http")) {
-            return window.location.origin;
-          }
-        }
-        if (!wsUrl) return window.location.origin || "";
-        return wsUrl
-          .replace(/^wss:\/\//i, "https://")
-          .replace(/^ws:\/\//i, "http://")
-          .replace(/\/ws\/detect\/?$/, "")
-          .replace(/\/detect\/?$/, "")
-          .replace(/\/ws\/?$/, "")
-          .replace(/\/+$/, "");
-      }
-
-      // Connect WebSocket
-      function connectWebSocket() {
-        if (ws) {
-          ws.close();
-        }
-
-        const url = inputWsUrl.value.trim();
-        updateConnectionStatus("connecting");
-        
-        ws = new WebSocket(url);
-        ws.binaryType = "arraybuffer";
-
-        ws.onopen = () => {
-          updateConnectionStatus("connected");
-          showToast("Connected to backend stream", "success");
-          fetchBackendMetadata();
-          sendWsConfig(); // Synchronize confidence thresholds
-          
-          if (isStreaming && currentMode === 'realtime') {
-            sendNextFrame();
-          }
-        };
-
-        ws.onmessage = (event) => {
-          isProcessingFrame = false;
-          try {
-            const result = JSON.parse(event.data);
-            if (result.type === "reset") {
-              showToast("Tracker memory cleared", "success");
-              return;
-            }
-            processDetections(result);
-          } catch (e) {
-            console.error("Parse error:", e);
-          }
-        };
-
-        ws.onclose = () => {
-          updateConnectionStatus("disconnected");
-          isProcessingFrame = false;
-          if (isStreaming && currentMode === 'realtime') {
-            setTimeout(connectWebSocket, 3000);
-          }
-        };
-
-        ws.onerror = (err) => {
-          updateConnectionStatus("disconnected");
-          showToast("WebSocket connection failed", "error");
-        };
-      }
-
-      // Play video device feed
+      // Multi-layer Resilient Camera Stream Starter
       async function startCamera() {
-        try {
-          const deviceId = selectCamera.value;
-          const constraints = {
-            audio: false,
-            video: deviceId 
-              ? { deviceId: { exact: deviceId } } 
-              : { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
-          };
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showToast("Trình duyệt không hỗ trợ truy cập Camera", "error");
+          return;
+        }
 
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const validDeviceId = (selectCamera.value && selectCamera.value.length > 5 && !selectCamera.value.includes("Camera")) 
+          ? selectCamera.value 
+          : null;
+
+        // Constraint candidate levels
+        const constraintAttempts = [];
+
+        if (validDeviceId) {
+          constraintAttempts.push({
+            audio: false,
+            video: {
+              deviceId: { exact: validDeviceId },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          });
+        }
+
+        constraintAttempts.push({
+          audio: false,
+          video: {
+            facingMode: { ideal: currentFacingMode || "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+
+        constraintAttempts.push({
+          audio: false,
+          video: {
+            facingMode: currentFacingMode || "environment"
+          }
+        });
+
+        constraintAttempts.push({
+          audio: false,
+          video: true
+        });
+
+        let activeStream = null;
+        let lastErr = null;
+
+        for (const constraints of constraintAttempts) {
+          try {
+            console.log("Attempting camera with constraints:", constraints);
+            activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+            if (activeStream) break;
+          } catch (err) {
+            console.warn("Constraint attempt failed:", err);
+            lastErr = err;
+          }
+        }
+
+        if (!activeStream) {
+          console.error("All camera constraints failed:", lastErr);
+          showToast("Không thể mở Camera: " + (lastErr?.message || "Vui lòng cấp quyền truy cập"), "error");
+          stopCamera();
+          return;
+        }
+
+        try {
+          stream = activeStream;
           video.srcObject = stream;
           
           await new Promise((resolve) => {
-            video.onloadedmetadata = () => {
-              video.play();
+            video.onloadedmetadata = async () => {
+              try {
+                await video.play();
+              } catch (e) {
+                console.warn("Video play exception:", e);
+              }
               checkTorchSupport();
               resolve();
             };
+            setTimeout(resolve, 800);
           });
 
           isStreaming = true;
@@ -1171,6 +1034,9 @@
           isDrawing = true;
           requestAnimationFrame(renderLoop);
 
+          // Refresh device list now that permissions are definitely granted
+          setupCameraSelection();
+
           if (currentMode === 'realtime') {
             viewportContainer.classList.add("scanning-live");
             if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -1182,28 +1048,31 @@
             viewportContainer.classList.remove("scanning-live");
           }
 
+          showToast("Camera đã sẵn sàng!", "success");
+
         } catch (error) {
-          console.error("Camera fail:", error);
-          showToast("Failed to open camera: " + error.message, "error");
+          console.error("Camera playback fail:", error);
+          showToast("Lỗi mở camera: " + error.message, "error");
           stopCamera();
         }
       }
 
       // Stop camera feed
       function stopCamera() {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+        if (video) {
+          video.srcObject = null;
+        }
+
         isStreaming = false;
         isDrawing = false;
         
         if (viewportContainer) {
           viewportContainer.classList.remove("scanning-live");
         }
-        
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          stream = null;
-        }
-        video.srcObject = null;
-        
         if (currentMode !== 'upload') {
           startOverlay.classList.remove("hidden");
         }
