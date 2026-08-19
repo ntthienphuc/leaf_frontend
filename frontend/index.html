@@ -962,19 +962,31 @@
       }
 
       function getHttpUrl(wsUrl) {
-        if (window.location.origin && window.location.origin !== "null" && window.location.protocol.startsWith("http")) {
-          if (!wsUrl || wsUrl.includes(window.location.host) || !wsUrl.startsWith("http")) {
+        if (!wsUrl) {
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return window.location.origin || "http://localhost:8000";
+          }
+          return "https://thienphuc12339-leaf.hf.space";
+        }
+
+        if (wsUrl.includes("localhost") || wsUrl.includes("127.0.0.1")) {
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             return window.location.origin;
           }
         }
-        if (!wsUrl) return window.location.origin || "";
-        return wsUrl
+
+        let url = wsUrl
           .replace(/^wss:\/\//i, "https://")
           .replace(/^ws:\/\//i, "http://")
-          .replace(/\/ws\/detect\/?$/, "")
-          .replace(/\/detect\/?$/, "")
-          .replace(/\/ws\/?$/, "")
+          .replace(/\/ws\/detect\/?$/i, "")
+          .replace(/\/detect\/?$/i, "")
+          .replace(/\/ws\/?$/i, "")
           .replace(/\/+$/, "");
+
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+          url = (window.location.protocol === 'https:' ? "https://" : "http://") + url;
+        }
+        return url;
       }
 
       function sendWsConfig() {
@@ -1612,7 +1624,7 @@
         clearDetections();
 
         if (mode === 'realtime') {
-          if (mobileDock) mobileDock.classList.remove("hidden");
+          if (mobileDock) mobileDock.classList.add("hidden");
           if (btnGrid) btnGrid.classList.remove("hidden");
           if (btnSnapshotDownload) btnSnapshotDownload.classList.remove("hidden");
           uploadContainer.classList.add("hidden");
@@ -1622,7 +1634,7 @@
           if (isStreaming) connectWebSocket();
           else startCamera();
         } else if (mode === 'snapshot') {
-          if (mobileDock) mobileDock.classList.remove("hidden");
+          if (mobileDock) mobileDock.classList.add("hidden");
           if (btnGrid) btnGrid.classList.remove("hidden");
           if (btnSnapshotDownload) btnSnapshotDownload.classList.remove("hidden");
           if (ws) ws.close();
