@@ -905,14 +905,47 @@
         }
       };
 
-      // Format label text to be cleaner
+      // Natural Vietnamese Disease Dictionary & Formatter
+      const LABEL_VIETNAMESE_MAP = {
+        'black_pepper_healthy': 'Lá tiêu khỏe mạnh',
+        'black pepper healthy': 'Lá tiêu khỏe mạnh',
+        'healthy': 'Lá khỏe mạnh',
+        'slow-decline': 'Bệnh chết chậm',
+        'slow decline': 'Bệnh chết chậm',
+        'slow_decline': 'Bệnh chết chậm',
+        'footrot': 'Bệnh chết nhanh (Thối gốc)',
+        'foot rot': 'Bệnh chết nhanh (Thối gốc)',
+        'foot_rot': 'Bệnh chết nhanh (Thối gốc)',
+        'pollu_disease': 'Bệnh thán thư (Pollu)',
+        'pollu disease': 'Bệnh thán thư (Pollu)',
+        'pollu': 'Bệnh thán thư (Pollu)',
+        'black_pepper_yellow_mottle_virus': 'Bệnh khảm vàng lá (Virus)',
+        'black pepper yellow mottle virus': 'Bệnh khảm vàng lá (Virus)',
+        'yellow mottle virus': 'Bệnh khảm vàng lá (Virus)',
+        'leaf spot': 'Bệnh đốm lá',
+        'powdery mildew': 'Bệnh phấn trắng',
+        'rust': 'Bệnh rỉ sắt',
+        'early blight': 'Bệnh đốm sớm',
+        'late blight': 'Bệnh sương mai',
+        'yellow leaf curl': 'Bệnh xoăn vàng lá',
+        'mosaic virus': 'Bệnh virus khảm'
+      };
+
       function formatLabel(label) {
-        if (!label) return "Unknown";
+        if (!label) return 'Chưa xác định';
+        const normalized = label.toLowerCase().replace(/_/g, ' ').trim();
+        if (LABEL_VIETNAMESE_MAP[normalized]) {
+          return LABEL_VIETNAMESE_MAP[normalized];
+        }
+        const keyNoDash = label.toLowerCase().replace(/-/g, ' ').replace(/_/g, ' ').trim();
+        if (LABEL_VIETNAMESE_MAP[keyNoDash]) {
+          return LABEL_VIETNAMESE_MAP[keyNoDash];
+        }
         return label
-          .replace(/_/g, " ")
-          .split(" ")
+          .replace(/_/g, ' ')
+          .split(' ')
           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ");
+          .join(' ');
       }
 
       // Connection Status layout updates
@@ -1229,18 +1262,48 @@
           }
 
           const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
-          const text = `${det.track_id !== null ? '[ID:' + det.track_id + '] ' : ''}${formatLabel(label)} ${(conf * 100).toFixed(0)}%`;
+          const viLabel = formatLabel(label);
+          const text = `${det.track_id !== null ? '#' + det.track_id + ' ' : ''}${viLabel} • ${(conf * 100).toFixed(0)}%`;
           
-          ctx.font = "bold 12px 'Plus Jakarta Sans', system-ui, sans-serif";
-          const textWidth = ctx.measureText(text).width;
+          // Responsive font size for high-res screens and mobile
+          const fontSize = Math.max(14, Math.min(22, Math.round(w / 45)));
+          ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif`;
+          const textMetrics = ctx.measureText(text);
+          const textWidth = textMetrics.width;
+          const padH = 10;
+          const padV = 6;
+          const barHeight = fontSize + padV * 2;
+          const barWidth = textWidth + padH * 2;
+          
+          let barY = y1 - barHeight - 4;
+          if (barY < 0) barY = y1 + 4;
+          let barX = x1;
+          if (barX + barWidth > w) barX = Math.max(0, w - barWidth - 4);
+          
+          // Badge pill with shadow
+          ctx.save();
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+          ctx.shadowBlur = 6;
+          ctx.shadowOffsetY = 2;
           
           ctx.fillStyle = strokeStyleColor;
-          const barHeight = 22;
-          const barY = y1 - barHeight >= 0 ? y1 - barHeight : y1;
-          ctx.fillRect(x1 - 2, barY, textWidth + 14, barHeight);
+          ctx.beginPath();
+          if (ctx.roundRect) {
+            ctx.roundRect(barX, barY, barWidth, barHeight, 6);
+          } else {
+            ctx.rect(barX, barY, barWidth, barHeight);
+          }
+          ctx.fill();
           
-          ctx.fillStyle = "#ffffff";
-          ctx.fillText(text, x1 + 5, barY + 15);
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.restore();
+          
+          // Badge text
+          ctx.fillStyle = '#ffffff';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(text, barX + padH, barY + barHeight / 2);
         });
       }
 
@@ -1353,47 +1416,61 @@
         }
       }
 
-      // Remedies & Treatment Suggestions Database
+      // Comprehensive Vietnamese Remedies & Treatment Suggestions Database
       const REMEDIES = {
-        "healthy": {
-          title: "Healthy Leaf",
-          remedy: "Foliage looks clean and vigorous. Keep maintaining current watering schedules and inspect periodically.",
-          color: "text-emerald-400"
+        'black pepper healthy': {
+          title: 'Lá Hồ Tiêu Khỏe Mạnh',
+          remedy: 'Cây sinh trưởng tốt, tán lá xanh khỏe và không có dấu hiệu nấm bệnh. Duy trì tưới tiêu điều độ, bón phân cân đối và kiểm tra định kỳ.',
+          tag: 'Khỏe mạnh',
+          color: 'text-pastel-greenDark'
         },
-        "leaf spot": {
-          title: "Leaf Spot Ailment",
-          remedy: "Prune infected leaves immediately. Avoid overhead watering to keep leaf surfaces dry. Spray copper-based fungicides if spreading.",
-          color: "text-rose-400"
+        'healthy': {
+          title: 'Lá Cây Khỏe Mạnh',
+          remedy: 'Tán lá xanh tươi, quang hợp tốt. Tiếp tục chế độ chăm sóc và tưới nước định kỳ.',
+          tag: 'Khỏe mạnh',
+          color: 'text-pastel-greenDark'
         },
-        "powdery mildew": {
-          title: "Powdery Mildew Fungus",
-          remedy: "Improve air circulation. Apply baking soda mixture (1 tbsp/gal water) or neem oil. Avoid watering from above.",
-          color: "text-amber-400"
+        'slow decline': {
+          title: 'Bệnh Chết Chậm (Tuyến trùng & Nấm rễ)',
+          remedy: 'Lá vàng úa từ từ từ dưới lên rồi rụng, rễ tơ bị thối nốt sần. Biện pháp: Xử lý tuyến trùng bằng chế phẩm sinh học (Trichoderma, Paecilomyces), xới nhẹ đất quanh tán, bón phân hữu cơ hoai mục và tạo rãnh thoát nước chống ngập úng.',
+          tag: 'Cảnh báo',
+          color: 'text-amber-600 font-bold'
         },
-        "rust": {
-          title: "Rust Fungal Infection",
-          remedy: "Dispose of infected stems. Apply sulfur or copper soap solutions. Keep water off foliage.",
-          color: "text-orange-400"
+        'slow-decline': {
+          title: 'Bệnh Chết Chậm (Tuyến trùng & Nấm rễ)',
+          remedy: 'Lá vàng úa từ từ từ dưới lên rồi rụng, rễ tơ bị thối nốt sần. Biện pháp: Xử lý tuyến trùng bằng chế phẩm sinh học (Trichoderma, Paecilomyces), xới nhẹ đất quanh tán, bón phân hữu cơ hoai mục và tạo rãnh thoát nước chống ngập úng.',
+          tag: 'Cảnh báo',
+          color: 'text-amber-600 font-bold'
         },
-        "early blight": {
-          title: "Early Blight Disease",
-          remedy: "Prune lower branches touching soil. Spray organic copper fungicides weekly. Mulch soil base to prevent spore splash.",
-          color: "text-rose-400"
+        'footrot': {
+          title: 'Bệnh Chết Nhanh (Thối Gốc do Phytophthora)',
+          remedy: 'Bệnh bùng phát mạnh trong mùa mưa, lá thâm đen rũ xuống rất nhanh và rụng hàng loạt. Biện pháp: Đào rãnh thoát nước ngay, cắt tỉa cành sát mặt đất. Phun và tưới gốc thuốc trừ nấm (Metalaxyl, Mancozeb, Fosetyl-Aluminium, gốc đồng) 2-3 lần cách nhau 7-10 ngày.',
+          tag: 'Nguy hiểm',
+          color: 'text-rose-600 font-bold'
         },
-        "late blight": {
-          title: "Late Blight Disease",
-          remedy: "Highly contagious. Uproot and burn diseased plants. Protect healthy neighbors with copper-based sprays.",
-          color: "text-rose-500"
+        'foot rot': {
+          title: 'Bệnh Chết Nhanh (Thối Gốc do Phytophthora)',
+          remedy: 'Bệnh bùng phát mạnh trong mùa mưa, lá thâm đen rũ xuống rất nhanh và rụng hàng loạt. Biện pháp: Đào rãnh thoát nước ngay, cắt tỉa cành sát mặt đất. Phun và tưới gốc thuốc trừ nấm (Metalaxyl, Mancozeb, Fosetyl-Aluminium, gốc đồng) 2-3 lần cách nhau 7-10 ngày.',
+          tag: 'Nguy hiểm',
+          color: 'text-rose-600 font-bold'
         },
-        "yellow leaf curl": {
-          title: "Yellow Leaf Curl Virus",
-          remedy: "Control carrying whitefly pests using insecticidal soap or yellow sticky traps. Use netting cover.",
-          color: "text-rose-400"
+        'pollu disease': {
+          title: 'Bệnh Thán Thư / Bệnh Pollu (Colletotrichum)',
+          remedy: 'Xuất hiện đốm tròn màu nâu có quầng vàng trên lá, làm thối chùm quả non. Biện pháp: Vệ sinh thu gom lá bệnh tiêu hủy. Tỉa cành cây che bóng cho vườn thông thoáng. Phun thuốc trừ nấm gốc đồng, Azoxystrobin hoặc Difenoconazole khi bệnh chớm xuất hiện.',
+          tag: 'Cần xử lý',
+          color: 'text-rose-500 font-bold'
         },
-        "mosaic virus": {
-          title: "Mosaic Tobacco Virus",
-          remedy: "No chemical treatment available. Destroy infected plants immediately. Clean tools and wash hands thoroughly.",
-          color: "text-rose-500 font-bold"
+        'black pepper yellow mottle virus': {
+          title: 'Bệnh Khảm Vàng Lá (Virus PYMV)',
+          remedy: 'Lá nhỏ, phiến lá biến dạng gồ ghề và có vệt khảm vàng loang lổ. Biện pháp: Không có thuốc chữa virus đặc trị; cần diệt trừ rệp sáp, rầy mềm (vật trung gian truyền bệnh) bằng dầu khoáng/thuốc sinh học, nhổ bỏ và tiêu hủy các cây bệnh nặng tránh lây lan.',
+          tag: 'Virus',
+          color: 'text-purple-600 font-bold'
+        },
+        'leaf spot': {
+          title: 'Bệnh Đốm Lá',
+          remedy: 'Cắt bỏ ngay lá bệnh. Tránh tưới nước trực tiếp lên mặt lá. Phun thuốc bảo vệ thực vật gốc đồng nếu có dấu hiệu lan rộng.',
+          tag: 'Bệnh lá',
+          color: 'text-rose-400 font-bold'
         }
       };
 
@@ -1438,15 +1515,15 @@
                     <div class="flex justify-between items-start gap-1">
                       <h4 class="font-bold text-xs text-pastel-greenDark truncate font-display" id="label-${trackId}">${formatLabel(label)}</h4>
                       <span id="badge-${trackId}" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap ${isHealthy ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'}">
-                        ${isHealthy ? 'Healthy' : 'Diseased'}
+                        ${isHealthy ? 'Khỏe mạnh' : 'Phát hiện bệnh'}
                       </span>
                     </div>
-                    <p class="text-[9px] text-zinc-550 mt-0.5 font-medium">Detector Confidence: ${(det.leaf_confidence * 100).toFixed(0)}%</p>
+                    <p class="text-[9px] text-zinc-550 mt-0.5 font-medium">Độ tin cậy phát hiện: ${(det.leaf_confidence * 100).toFixed(0)}%</p>
                   </div>
                   
                   <div class="mt-2">
                     <div class="flex justify-between text-[9px] text-zinc-550 font-bold mb-1">
-                      <span>Diagnosis Confidence</span>
+                      <span>Độ chính xác chẩn đoán</span>
                       <span class="text-zinc-700 font-mono" id="conf-${trackId}">${(conf * 100).toFixed(0)}%</span>
                     </div>
                     <div class="w-full bg-zinc-100 border border-zinc-200 rounded-full h-1.5 overflow-hidden shadow-inner">
@@ -1460,7 +1537,7 @@
               <div id="remedy-drawer-${trackId}" class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out border-t border-transparent">
                 <div class="pt-2.5 mt-1 border-t border-pastel-border flex flex-col gap-1">
                   <div class="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-pastel-greenDark">
-                    <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-pastel-green"></i> Treatment Tips:
+                    <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-pastel-green"></i> Hướng Dẫn & Biện Pháp Xử Lý:
                   </div>
                   <p class="text-[10px] text-zinc-600 leading-relaxed font-sans">${remedyInfo.remedy}</p>
                 </div>
