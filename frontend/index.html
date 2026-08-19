@@ -1250,17 +1250,21 @@
       }
 
       let currentDetections = [];
+        let selectedLeafId = null;
 
       // Drawing Bounding Boxes and Polygons (Used in all modes)
       function drawBoundingBoxes(ctx) {
         const w = overlay.width;
         const h = overlay.height;
 
-        // Dynamic scale factor based on canvas resolution (crisp on 480p, 1080p, 4K)
         const baseScale = Math.max(1.0, Math.min(w, h) / 480);
         const lineW = Math.max(5, Math.round(5.0 * baseScale));
 
-        currentDetections.forEach(det => {
+        currentDetections.forEach((det, detIdx) => {
+          const leafId = det.track_id !== null && det.track_id !== undefined ? det.track_id : `leaf-${detIdx + 1}`;
+          det._assignedId = leafId;
+          const isSelected = selectedLeafId !== null && (String(selectedLeafId) === String(leafId));
+
           const originalFrame = det.originalFrameSize || { width: w, height: h };
           const scaleX = w / originalFrame.width;
           const scaleY = h / originalFrame.height;
@@ -1274,9 +1278,9 @@
           const label = det.stable_disease?.label || det.disease?.label || "healthy";
           const isHealthy = label.toLowerCase().includes("healthy");
           
-          const strokeStyleColor = isHealthy ? "#22c55e" : "#ef4444";
-          const glowColor = isHealthy ? "rgba(34, 197, 94, 0.55)" : "rgba(239, 68, 68, 0.55)";
-          const secondaryColor = isHealthy ? "rgba(34, 197, 94, 0.25)" : "rgba(239, 68, 68, 0.25)";
+          const strokeStyleColor = isSelected ? "#0284c7" : (isHealthy ? "#22c55e" : "#ef4444");
+          const glowColor = isSelected ? "rgba(2, 132, 199, 0.95)" : (isHealthy ? "rgba(34, 197, 94, 0.55)" : "rgba(239, 68, 68, 0.55)");
+          const secondaryColor = isSelected ? "rgba(2, 132, 199, 0.35)" : (isHealthy ? "rgba(34, 197, 94, 0.25)" : "rgba(239, 68, 68, 0.25)");
           
           // Draw mask polygon if available
           if (det.mask_xy && det.mask_xy.length > 0) {
@@ -1290,26 +1294,23 @@
             });
             ctx.closePath();
             
-            // Draw background fill
             ctx.fillStyle = secondaryColor;
             ctx.fill();
             
-            // Draw polygon contour outline with subtle glow for maximum contrast
             ctx.shadowColor = glowColor;
-            ctx.shadowBlur = Math.round(8 * baseScale);
+            ctx.shadowBlur = Math.round((isSelected ? 16 : 8) * baseScale);
             ctx.strokeStyle = strokeStyleColor;
-            ctx.lineWidth = lineW;
+            ctx.lineWidth = lineW + (isSelected ? 3 : 0);
             ctx.lineJoin = "round";
             ctx.lineCap = "round";
             ctx.stroke();
             ctx.restore();
           } else {
-            // Draw box fallback
             ctx.save();
             ctx.shadowColor = glowColor;
-            ctx.shadowBlur = Math.round(8 * baseScale);
+            ctx.shadowBlur = Math.round((isSelected ? 16 : 8) * baseScale);
             ctx.strokeStyle = strokeStyleColor;
-            ctx.lineWidth = lineW;
+            ctx.lineWidth = lineW + (isSelected ? 3 : 0);
             ctx.lineJoin = "round";
             ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
             
@@ -1320,9 +1321,8 @@
 
           const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
           const viLabel = formatLabel(label);
-          const text = `${det.track_id !== null ? '#' + det.track_id + ' ' : ''}${viLabel} • ${(conf * 100).toFixed(0)}%`;
+          const text = `${isSelected ? '👉 [ĐANG CHỌN] ' : ''}#${leafId} ${viLabel} • ${(conf * 100).toFixed(0)}%`;
           
-          // Prominent, bold, high-contrast label badge
           const fontSize = Math.max(16, Math.round(18 * baseScale));
           ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif`;
           const textMetrics = ctx.measureText(text);
@@ -1331,108 +1331,40 @@
           const padV = Math.round(8 * baseScale);
           const barHeight = fontSize + padV * 2;
           const barWidth = textWidth + padH * 2;
+          
+          let tagY = y1 - barHeight - (4 * baseScale);
+          let tagX = x1;
+          
+          if (tagY < 0) tagY = y1 + (6 * baseScale);
+          if (tagX + barWidth > w) tagX = Math.max(0, w - barWidth - 4);
+          
           const radius = Math.round(8 * baseScale);
-          
-          let barY = y1 - barHeight - (6 * baseScale);
-          if (barY < 0) barY = y1 + (6 * baseScale);
-          let barX = x1;
-          if (barX + barWidth > w) barX = Math.max(0, w - barWidth - 4);
-          
-          // Badge pill with prominent drop shadow and border
           ctx.save();
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-          ctx.shadowBlur = Math.round(8 * baseScale);
-          ctx.shadowOffsetY = Math.round(3 * baseScale);
-          
-          ctx.fillStyle = strokeStyleColor;
           ctx.beginPath();
-          if (ctx.roundRect) {
-            ctx.roundRect(barX, barY, barWidth, barHeight, radius);
-          } else {
-            ctx.rect(barX, barY, barWidth, barHeight);
-          }
+          ctx.moveTo(tagX + radius, tagY);
+          ctx.lineTo(tagX + barWidth - radius, tagY);
+          ctx.quadraticCurveTo(tagX + barWidth, tagY, tagX + barWidth, tagY + radius);
+          ctx.lineTo(tagX + barWidth, tagY + barHeight - radius);
+          ctx.quadraticCurveTo(tagX + barWidth, tagY + barHeight, tagX + barWidth - radius, tagY + barHeight);
+          ctx.lineTo(tagX + radius, tagY + barHeight);
+          ctx.quadraticCurveTo(tagX, tagY + barHeight, tagX, tagY + barHeight - radius);
+          ctx.lineTo(tagX, tagY + radius);
+          ctx.quadraticCurveTo(tagX, tagY, tagX + radius, tagY);
+          ctx.closePath();
+          
+          ctx.shadowColor = glowColor;
+          ctx.shadowBlur = Math.round(10 * baseScale);
+          ctx.fillStyle = isSelected ? "#0284c7" : strokeStyleColor;
           ctx.fill();
           
-          // Crisp white border around badge
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = Math.max(2, Math.round(2.2 * baseScale));
-          ctx.stroke();
-          ctx.restore();
-          
-          // Badge text
-          ctx.save();
-          ctx.fillStyle = '#ffffff';
-          ctx.textBaseline = 'middle';
-          ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif`;
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-          ctx.shadowBlur = 4;
-          ctx.fillText(text, barX + padH, barY + barHeight / 2);
+          ctx.shadowColor = "transparent";
+          ctx.fillStyle = "#ffffff";
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, tagX + padH, tagY + padV + (fontSize / 2));
           ctx.restore();
         });
       }
 
-      // Process WebSocket Detections
-      function processDetections(result) {
-        const now = performance.now();
-        const rtt = Math.round(now - lastFrameSentTime);
-        
-        statLatency.textContent = rtt;
-        cardLatency.textContent = rtt;
-        
-        frameTimestamps.push(now);
-
-        const detections = result.detections || [];
-        cardTargets.textContent = detections.length;
-        trackedCounter.textContent = `${detections.length} Scanned`;
-
-        currentDetections = detections.map(det => ({
-          ...det,
-          originalFrameSize: result.frame
-        }));
-
-        if (detections.length > 0 && lastCaptureBlob) {
-          // Use the exact JPEG sent to the API, not a newer camera frame.
-          if (lastCaptureObjectUrl) URL.revokeObjectURL(lastCaptureObjectUrl);
-          lastCaptureObjectUrl = URL.createObjectURL(lastCaptureBlob);
-          frameImageObj.onload = () => updateTrackedCardContainer(currentDetections);
-          frameImageObj.src = lastCaptureObjectUrl;
-        } else {
-          updateTrackedCardContainer([]);
-        }
-
-        const elapsed = performance.now() - lastFrameSentTime;
-        const targetDelay = 1000 / targetFrameRate;
-        const remainingDelay = Math.max(0, targetDelay - elapsed);
-        
-        setTimeout(() => {
-          isProcessingFrame = false;
-          sendNextFrame();
-        }, remainingDelay);
-      }
-
-      // Process REST Static Predictions (Modes 2 & 3)
-      function processStaticPredictions(result) {
-        loadingOverlay.classList.add("hidden");
-        
-        const detections = result.detections || [];
-        cardTargets.textContent = detections.length;
-        trackedCounter.textContent = `${detections.length} Scanned`;
-        cardLatency.textContent = "-";
-
-        currentDetections = detections.map(det => ({
-          ...det,
-          originalFrameSize: result.frame
-        }));
-
-        // Draw results once to update view
-        const ctx = overlay.getContext("2d");
-        ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
-        drawBoundingBoxes(ctx);
-
-        updateTrackedCardContainer(currentDetections);
-      }
-
-      // Generate crop thumbnail
       function generateCropDataUrl(det) {
         try {
           const [x1, y1, x2, y2] = det.bbox_xyxy;
@@ -2042,6 +1974,80 @@
           showToast("Stream paused automatically while backgrounded");
         }
       });
+    
+
+      // Unified Leaf Selection Function (Synchronizes Canvas & Sidebar Cards)
+      function selectLeaf(targetId) {
+        selectedLeafId = targetId;
+
+        // Re-draw canvas immediately for static images or snapshots
+        if (currentMode !== 'realtime' && frameImageObj && frameImageObj.src) {
+          const ctx = overlay.getContext("2d");
+          ctx.clearRect(0, 0, overlay.width, overlay.height);
+          ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
+          drawBoundingBoxes(ctx);
+        }
+
+        // Highlight matching card in sidebar
+        const cardEl = document.getElementById(`target-card-${targetId}`);
+        if (cardEl) {
+          cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          cardEl.classList.add("ring-4", "ring-cyan-500", "scale-[1.02]", "bg-cyan-50/50");
+          setTimeout(() => {
+            cardEl.classList.remove("ring-4", "ring-cyan-500", "scale-[1.02]", "bg-cyan-50/50");
+          }, 2000);
+        }
+
+        // Find diagnosis info for Toast
+        const det = currentDetections.find(d => String(d._assignedId || d.track_id) === String(targetId));
+        if (det) {
+          const label = det.stable_disease?.label || det.disease?.label || "Lá cây";
+          const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
+          showToast(`🍃 Đang xem Lá #${targetId}: ${formatLabel(label)} (${(conf * 100).toFixed(0)}%)`, "info");
+        }
+      }
+
+      // Tap/Click on Canvas to Select Leaf
+      function handleCanvasClick(evt) {
+        if (!currentDetections || currentDetections.length === 0) return;
+
+        const rect = overlay.getBoundingClientRect();
+        const scaleX = overlay.width / rect.width;
+        const scaleY = overlay.height / rect.height;
+        const clickX = (evt.clientX - rect.left) * scaleX;
+        const clickY = (evt.clientY - rect.top) * scaleY;
+
+        let matchedLeaf = null;
+        for (const det of currentDetections) {
+          const originalFrame = det.originalFrameSize || { width: overlay.width, height: overlay.height };
+          const sX = overlay.width / originalFrame.width;
+          const sY = overlay.height / originalFrame.height;
+
+          const [x1_orig, y1_orig, x2_orig, y2_orig] = det.bbox_xyxy;
+          const x1 = x1_orig * sX;
+          const y1 = y1_orig * sY;
+          const x2 = x2_orig * sX;
+          const y2 = y2_orig * sY;
+
+          if (clickX >= x1 && clickX <= x2 && clickY >= y1 && clickY <= y2) {
+            matchedLeaf = det;
+            break;
+          }
+        }
+
+        if (matchedLeaf) {
+          const targetId = matchedLeaf._assignedId || (matchedLeaf.track_id !== null ? matchedLeaf.track_id : "leaf-1");
+          selectLeaf(targetId);
+        }
+      }
+
+      overlay.addEventListener("click", handleCanvasClick);
+      overlay.addEventListener("touchend", (e) => {
+        if (e.changedTouches && e.changedTouches.length > 0) {
+          handleCanvasClick(e.changedTouches[0]);
+        }
+      });
+
     </script>
   </body>
 </html>
