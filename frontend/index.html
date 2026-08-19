@@ -1328,9 +1328,10 @@
           const label = det.stable_disease?.label || det.disease?.label || "healthy";
           const isHealthy = label.toLowerCase().includes("healthy");
           
-          const strokeStyleColor = isSelected ? "#0284c7" : (isHealthy ? "#22c55e" : "#ef4444");
-          const glowColor = isSelected ? "rgba(2, 132, 199, 0.95)" : (isHealthy ? "rgba(34, 197, 94, 0.55)" : "rgba(239, 68, 68, 0.55)");
-          const secondaryColor = isSelected ? "rgba(2, 132, 199, 0.35)" : (isHealthy ? "rgba(34, 197, 94, 0.25)" : "rgba(239, 68, 68, 0.25)");
+          // Ultra Vibrant Highlight for Selected Leaf (Neon Cyan & Electric Glow)
+          const strokeStyleColor = isSelected ? "#00e5ff" : (isHealthy ? "#22c55e" : "#ef4444");
+          const glowColor = isSelected ? "rgba(0, 229, 255, 1.0)" : (isHealthy ? "rgba(34, 197, 94, 0.55)" : "rgba(239, 68, 68, 0.55)");
+          const secondaryColor = isSelected ? "rgba(0, 229, 255, 0.40)" : (isHealthy ? "rgba(34, 197, 94, 0.25)" : "rgba(239, 68, 68, 0.25)");
           
           // Draw mask polygon if available
           if (det.mask_xy && det.mask_xy.length > 0) {
@@ -1348,32 +1349,46 @@
             ctx.fill();
             
             ctx.shadowColor = glowColor;
-            ctx.shadowBlur = Math.round((isSelected ? 16 : 8) * baseScale);
+            ctx.shadowBlur = Math.round((isSelected ? 26 : 8) * baseScale);
             ctx.strokeStyle = strokeStyleColor;
-            ctx.lineWidth = lineW + (isSelected ? 3 : 0);
+            ctx.lineWidth = lineW + (isSelected ? 5 : 0);
             ctx.lineJoin = "round";
             ctx.lineCap = "round";
             ctx.stroke();
+            
+            // Double stroke ring if selected for maximum contrast
+            if (isSelected) {
+              ctx.strokeStyle = "#ffffff";
+              ctx.lineWidth = Math.max(2, Math.round(2 * baseScale));
+              ctx.stroke();
+            }
             ctx.restore();
           } else {
             ctx.save();
             ctx.shadowColor = glowColor;
-            ctx.shadowBlur = Math.round((isSelected ? 16 : 8) * baseScale);
+            ctx.shadowBlur = Math.round((isSelected ? 26 : 8) * baseScale);
             ctx.strokeStyle = strokeStyleColor;
-            ctx.lineWidth = lineW + (isSelected ? 3 : 0);
+            ctx.lineWidth = lineW + (isSelected ? 5 : 0);
             ctx.lineJoin = "round";
             ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
             
             ctx.fillStyle = secondaryColor;
             ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+
+            if (isSelected) {
+              ctx.strokeStyle = "#ffffff";
+              ctx.lineWidth = Math.max(2, Math.round(2 * baseScale));
+              ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            }
             ctx.restore();
           }
 
+          // Badge tag
           const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
           const viLabel = formatLabel(label);
           const text = `${isSelected ? '👉 [ĐANG CHỌN] ' : ''}#${leafId} ${viLabel} • ${(conf * 100).toFixed(0)}%`;
           
-          const fontSize = Math.max(16, Math.round(18 * baseScale));
+          const fontSize = Math.max(16, Math.round((isSelected ? 20 : 18) * baseScale));
           ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif`;
           const textMetrics = ctx.measureText(text);
           const textWidth = textMetrics.width;
@@ -1403,7 +1418,7 @@
           ctx.closePath();
           
           ctx.shadowColor = glowColor;
-          ctx.shadowBlur = Math.round(10 * baseScale);
+          ctx.shadowBlur = Math.round(12 * baseScale);
           ctx.fillStyle = isSelected ? "#0284c7" : strokeStyleColor;
           ctx.fill();
           
@@ -1415,8 +1430,6 @@
         });
       }
 
-      
-      // Process REST Static Predictions (Modes 2 & 3: Snapshot & Upload)
       function processStaticPredictions(result) {
         loadingOverlay.classList.add("hidden");
         
@@ -2091,24 +2104,45 @@
 
       // Unified Leaf Selection Function (Synchronizes Canvas & Sidebar Cards)
       function selectLeaf(targetId) {
-        selectedLeafId = targetId;
+        selectedLeafId = String(targetId);
 
         // Re-draw canvas immediately for static images or snapshots
-        if (currentMode !== 'realtime' && frameImageObj && frameImageObj.src) {
+        if (frameImageObj && frameImageObj.src) {
           const ctx = overlay.getContext("2d");
           ctx.clearRect(0, 0, overlay.width, overlay.height);
-          ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
+          if (frameImageObj.complete && frameImageObj.naturalWidth > 0) {
+            ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
+          }
           drawBoundingBoxes(ctx);
         }
 
-        // Highlight matching card in sidebar
+        // 1. Move matching card to the VERY TOP of the diagnostic list!
         const cardEl = document.getElementById(`target-card-${targetId}`);
-        if (cardEl) {
-          cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
-          cardEl.classList.add("ring-4", "ring-cyan-500", "scale-[1.02]", "bg-cyan-50/50");
-          setTimeout(() => {
-            cardEl.classList.remove("ring-4", "ring-cyan-500", "scale-[1.02]", "bg-cyan-50/50");
-          }, 2000);
+        const targetList = document.getElementById("target-list");
+        if (cardEl && targetList) {
+          // Prepend card to top of the list
+          targetList.prepend(cardEl);
+          // Scroll container to top smoothly
+          targetList.scrollTo({ top: 0, behavior: "smooth" });
+
+          // Reset other cards and highlight this card
+          document.querySelectorAll("#target-list > div").forEach(c => {
+            c.classList.remove("ring-4", "ring-cyan-500", "scale-[1.02]", "bg-cyan-50/80", "border-cyan-400");
+          });
+
+          cardEl.classList.add("ring-4", "ring-cyan-500", "scale-[1.02]", "bg-cyan-50/80", "border-cyan-400");
+
+          // Auto-expand the treatment remedy drawer for the selected leaf!
+          const drawer = document.getElementById(`remedy-drawer-${targetId}`);
+          const indicator = document.getElementById(`expand-indicator-${targetId}`);
+          if (drawer) {
+            drawer.style.maxHeight = "300px";
+            drawer.classList.remove("border-transparent");
+            drawer.classList.add("border-pastel-border");
+          }
+          if (indicator) {
+            indicator.classList.add("rotate-180", "text-pastel-green");
+          }
         }
 
         // Find diagnosis info for Toast
@@ -2116,19 +2150,46 @@
         if (det) {
           const label = det.stable_disease?.label || det.disease?.label || "Lá cây";
           const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
-          showToast(`🍃 Đang xem Lá #${targetId}: ${formatLabel(label)} (${(conf * 100).toFixed(0)}%)`, "info");
+          showToast(`🍃 Đang chọn Lá #${targetId}: ${formatLabel(label)} (${(conf * 100).toFixed(0)}%)`, "info");
         }
       }
 
-      // Tap/Click on Canvas to Select Leaf
+      // Letterbox-Aware Tap/Click on Canvas to Select Leaf
       function handleCanvasClick(evt) {
-        if (!currentDetections || currentDetections.length === 0) return;
+        if (!currentDetections || currentDetections.length === 0 || overlay.width === 0 || overlay.height === 0) return;
 
         const rect = overlay.getBoundingClientRect();
-        const scaleX = overlay.width / rect.width;
-        const scaleY = overlay.height / rect.height;
-        const clickX = (evt.clientX - rect.left) * scaleX;
-        const clickY = (evt.clientY - rect.top) * scaleY;
+        if (rect.width === 0 || rect.height === 0) return;
+
+        // Calculate exact letterbox rendering bounds inside the canvas element
+        const canvasRatio = overlay.width / overlay.height;
+        const elemRatio = rect.width / rect.height;
+
+        let renderWidth = rect.width;
+        let renderHeight = rect.height;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (elemRatio > canvasRatio) {
+          // Element is wider than canvas -> black/empty bars on left/right
+          renderHeight = rect.height;
+          renderWidth = rect.height * canvasRatio;
+          offsetX = (rect.width - renderWidth) / 2;
+        } else {
+          // Element is taller than canvas -> black/empty bars on top/bottom
+          renderWidth = rect.width;
+          renderHeight = rect.width / canvasRatio;
+          offsetY = (rect.height - renderHeight) / 2;
+        }
+
+        const clientX = evt.clientX - rect.left - offsetX;
+        const clientY = evt.clientY - rect.top - offsetY;
+
+        // Ignore clicks on letterbox margins
+        if (clientX < 0 || clientX > renderWidth || clientY < 0 || clientY > renderHeight) return;
+
+        const clickX = (clientX / renderWidth) * overlay.width;
+        const clickY = (clientY / renderHeight) * overlay.height;
 
         let matchedLeaf = null;
         for (const det of currentDetections) {
@@ -2160,9 +2221,7 @@
           handleCanvasClick(e.changedTouches[0]);
         }
       });
-
-    
-
+      
       // ==========================================
       // SUPER FEATURES: Voice, Dosage Calc & Report
       // ==========================================
