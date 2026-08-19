@@ -431,24 +431,27 @@
             </div>
             
             <!-- Drag & Drop Upload Overlay -->
-            <div id="upload-container" class="absolute inset-0 bg-pastel-cream/90 flex flex-col items-center justify-center p-6 text-center border-4 border-dashed border-pastel-green/40 m-4 rounded-2xl transition cursor-pointer hidden hover:bg-pastel-greenLight/20">
-              <input type="file" id="file-input" class="hidden" accept="image/jpeg,image/png" />
-              <div class="w-16 h-16 rounded-2xl bg-pastel-greenLight border border-pastel-green/20 flex items-center justify-center mb-4 shadow-sm">
-                <i data-lucide="image-up" class="w-8 h-8 text-pastel-green"></i>
+            <div id="upload-container" class="absolute inset-0 bg-white flex flex-col items-center justify-center p-6 text-center z-10 transition-all cursor-pointer hidden select-none">
+                <input type="file" id="file-input" class="hidden" accept="image/jpeg,image/png,image/webp" />
+                <div class="w-full max-w-sm border-4 border-dashed border-pastel-green/50 bg-pastel-greenLight/30 rounded-3xl p-8 flex flex-col items-center justify-center transition-all duration-300 hover:border-pastel-green hover:bg-pastel-greenLight/50 hover:scale-[1.01] shadow-sm">
+                  <div class="w-20 h-20 rounded-3xl bg-white border-2 border-pastel-border flex items-center justify-center mb-4 shadow-md text-pastel-green">
+                    <i data-lucide="upload-cloud" class="w-10 h-10 animate-bounce"></i>
+                  </div>
+                  <h3 class="text-lg font-bold text-pastel-greenDark font-display">Tải Ảnh Lá Cây Để Chẩn Đoán</h3>
+                  <p class="text-xs text-zinc-500 mt-2 max-w-xs leading-relaxed">Kéo thả ảnh chụp lá cây vào đây, hoặc duyệt file từ máy tính / điện thoại.</p>
+                  
+                  <div class="flex flex-wrap justify-center gap-3 mt-6">
+                    <button id="btn-browse-file" class="px-5 py-2.5 bg-pastel-green text-white rounded-xl font-bold text-xs cute-shadow-btn transition active:scale-95 flex items-center gap-2 cursor-pointer shadow-sm">
+                      <i data-lucide="folder-open" class="w-4 h-4"></i> Chọn File Ảnh
+                    </button>
+                    <button id="btn-demo-file" class="px-5 py-2.5 bg-white border-2 border-pastel-green text-pastel-greenDark rounded-xl font-bold text-xs hover:bg-pastel-greenLight transition active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm">
+                      <i data-lucide="sparkles" class="w-4 h-4 text-pastel-green"></i> Thử Ảnh Mẫu
+                    </button>
+                  </div>
+                </div>
               </div>
-              <h3 class="text-base font-bold text-pastel-greenDark font-display">Upload Leaf Photo</h3>
-              <p class="text-xs text-zinc-500 mt-2 max-w-xs leading-relaxed">Drag and drop your plant foliage photo here, or browse local files to initiate diagnosis.</p>
-              <div class="flex gap-3 mt-5 select-none">
-                <button id="btn-browse-file" class="px-4 py-2 bg-white border-2 border-pastel-green text-pastel-greenDark rounded-xl font-bold text-xs hover:bg-pastel-greenLight transition active:scale-95 cursor-pointer">
-                  Browse Files 📁
-                </button>
-                <button id="btn-demo-file" class="px-4 py-2 bg-pastel-greenLight border-2 border-pastel-green text-pastel-greenDark rounded-xl font-bold text-xs hover:bg-pastel-green hover:text-white transition active:scale-95 flex items-center gap-1 cursor-pointer">
-                  Try Demo Image 🍃
-                </button>
-              </div>
-            </div>
-            
-            <!-- Real-time HUD stats (floating bubble) -->
+              
+              <!-- Real-time HUD stats (floating bubble) -->
             <div id="floating-hud" class="absolute top-4 left-4 flex flex-col gap-1.5 pointer-events-none transition-all duration-300 select-none">
               <div class="px-2.5 py-1 rounded-xl bg-white/95 backdrop-blur-sm border-2 border-pastel-border text-[10px] font-bold text-zinc-600 flex items-center gap-2 shadow-sm">
                 <span class="w-2 h-2 rounded-full bg-pastel-green status-pulse-connected"></span>
@@ -806,42 +809,59 @@
         // Initialize mode conditions
         clearDetections();
         
-        if (mode === 'realtime') {
-          uploadContainer.classList.add("hidden");
-          startOverlay.classList.remove("hidden");
-          btnRetakeAction.classList.add("hidden");
-          btnCaptureAction.classList.remove("hidden");
-          
-          if (isStreaming) {
-            startOverlay.classList.add("hidden");
-            connectWebSocket();
-          } else {
-            startCamera();
-          }
-        } else if (mode === 'snapshot') {
-          // Close WS if active, keep camera live without sending frames automatically
-          if (ws) ws.close();
-          uploadContainer.classList.add("hidden");
-          startOverlay.classList.remove("hidden");
-          btnRetakeAction.classList.add("hidden");
-          btnCaptureAction.classList.remove("hidden");
+        const mobileDock = document.getElementById("mobile-quick-dock");
+          const btnGrid = document.getElementById("btn-grid-toggle");
+          const btnSnapshotDownload = document.getElementById("btn-snapshot");
 
-          if (isStreaming) {
+          if (mode === 'realtime') {
+            if (mobileDock) mobileDock.classList.remove("hidden");
+            if (btnGrid) btnGrid.classList.remove("hidden");
+            if (btnSnapshotDownload) btnSnapshotDownload.classList.remove("hidden");
+            
+            uploadContainer.classList.add("hidden");
+            startOverlay.classList.remove("hidden");
+            btnRetakeAction.classList.add("hidden");
+            btnCaptureAction.classList.remove("hidden");
+            
+            if (isStreaming) {
+              startOverlay.classList.add("hidden");
+              connectWebSocket();
+            } else {
+              startCamera();
+            }
+          } else if (mode === 'snapshot') {
+            if (mobileDock) mobileDock.classList.remove("hidden");
+            if (btnGrid) btnGrid.classList.remove("hidden");
+            if (btnSnapshotDownload) btnSnapshotDownload.classList.remove("hidden");
+
+            if (ws) ws.close();
+            uploadContainer.classList.add("hidden");
+            startOverlay.classList.remove("hidden");
+            btnRetakeAction.classList.add("hidden");
+            btnCaptureAction.classList.remove("hidden");
+
+            if (isStreaming) {
+              startOverlay.classList.add("hidden");
+              isDrawing = true;
+              requestAnimationFrame(renderLoop);
+            } else {
+              startCamera();
+            }
+          } else if (mode === 'upload') {
+            if (mobileDock) mobileDock.classList.add("hidden");
+            if (btnGrid) btnGrid.classList.add("hidden");
+            if (btnSnapshotDownload) btnSnapshotDownload.classList.add("hidden");
+
+            if (ws) ws.close();
+            stopCamera();
+            
             startOverlay.classList.add("hidden");
-            isDrawing = true;
-            requestAnimationFrame(renderLoop);
-          } else {
-            startCamera();
+            const ctx = overlay.getContext("2d");
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+            
+            uploadContainer.classList.remove("hidden");
+            btnClearUpload.classList.add("hidden");
           }
-        } else if (mode === 'upload') {
-          // Upload mode: close socket and release camera completely
-          if (ws) ws.close();
-          stopCamera();
-          
-          startOverlay.classList.add("hidden");
-          uploadContainer.classList.remove("hidden");
-          btnClearUpload.classList.add("hidden");
-        }
       }
 
       // Show toast notifications
@@ -2350,6 +2370,29 @@
       }
 
       // Hook updateHealthMeter into renderReports
+
+    
+
+      // Mode 3: Upload Action Listeners
+      if (document.getElementById("btn-upload-another")) {
+        document.getElementById("btn-upload-another").onclick = () => fileInput.click();
+      }
+      if (document.getElementById("btn-upload-demo-bar")) {
+        document.getElementById("btn-upload-demo-bar").onclick = () => btnDemoFile.click();
+      }
+      if (document.getElementById("btn-download-upload-result")) {
+        document.getElementById("btn-download-upload-result").onclick = () => {
+          if (!overlay || overlay.width === 0) {
+            showToast("Chưa có ảnh kết quả để tải", "error");
+            return;
+          }
+          const link = document.createElement("a");
+          link.download = `leaf_diagnosis_${Date.now()}.jpg`;
+          link.href = overlay.toDataURL("image/jpeg", 0.95);
+          link.click();
+          showToast("Đã tải ảnh kết quả về máy", "success");
+        };
+      }
 
     </script>
   
