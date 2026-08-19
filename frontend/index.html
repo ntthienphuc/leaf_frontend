@@ -1068,9 +1068,16 @@
         }
       }
 
-      // Send next video frame over WebSocket
+      // Send next video frame over WebSocket (with auto Watchdog recovery)
+      let frameWatchdogTimer = null;
+
       function sendNextFrame() {
-        if (!isStreaming || currentMode !== 'realtime' || !ws || ws.readyState !== WebSocket.OPEN || isProcessingFrame) {
+        if (!isStreaming || currentMode !== 'realtime' || !ws || ws.readyState !== WebSocket.OPEN) {
+          isProcessingFrame = false;
+          return;
+        }
+
+        if (isProcessingFrame) {
           return;
         }
 
@@ -1082,26 +1089,60 @@
         isProcessingFrame = true;
         lastFrameSentTime = performance.now();
 
-        // Scale down resolution if requested
-        const targetRes = selectResolution.value;
-        let scale = 1.0;
-        if (targetRes === "480p" && video.videoHeight > 480) scale = 480 / video.videoHeight;
-        else if (targetRes === "360p" && video.videoHeight > 360) scale = 360 / video.videoHeight;
+        // Watchdog timer: If server doesn't respond in 1500ms, unlock processing flag
+        if (frameWatchdogTimer) clearTimeout(frameWatchdogTimer);
+        frameWatchdogTimer = setTimeout(() => {
+          if (isProcessingFrame && isStreaming && currentMode === 'realtime') {
+            console.warn("Watchdog: frame response timeout, recovering pipeline...");
+            isProcessingFrame = false;
+            sendNextFrame();
+          }
+        }, 1500);
+
+        // Scale resolution
+        const targetRes = selectResolution ? selectResolution.value : "720p";
+        let maxDim = 720;
+        if (targetRes === "480p") maxDim = 480;
+        else if (targetRes === "360p") maxDim = 360;
+
+        const maxSide = Math.max(video.videoWidth, video.videoHeight);
+        const scale = Math.min(1.0, maxDim / maxSide);
 
         captureCanvas.width = Math.round(video.videoWidth * scale);
         captureCanvas.height = Math.round(video.videoHeight * scale);
 
+        if (statResolution) {
+          statResolution.textContent = `${captureCanvas.width}x${captureCanvas.height}`;
+        }
+
         const capCtx = captureCanvas.getContext("2d");
         capCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
 
-        const quality = parseInt(sliderQuality.value) / 100.0;
+        const quality = parseInt(sliderQuality ? sliderQuality.value : 70) / 100.0;
         captureCanvas.toBlob(
           (blob) => {
-            if (blob && ws && ws.readyState === WebSocket.OPEN) {
+            if (!blob) {
+              isProcessingFrame = false;
+              return;
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
               lastCaptureBlob = blob;
-              payloadSizeCount += blob.size;
-              cardPayload.textContent = `${(blob.size / 1024).toFixed(1)} KB`;
-              blob.arrayBuffer().then((buffer) => ws.send(buffer));
+              const sizeKb = blob.size / 1024;
+              if (cardPayload) {
+                cardPayload.textContent = `${sizeKb.toFixed(1)} KB`;
+              }
+
+              // Send binary JPEG bytes
+              blob.arrayBuffer().then((buffer) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(buffer);
+                } else {
+                  isProcessingFrame = false;
+                }
+              }).catch(() => {
+                isProcessingFrame = false;
+              });
             } else {
               isProcessingFrame = false;
             }
@@ -1113,9 +1154,28 @@
 
       // Process WebSocket Detections
       function processDetections(result) {
+        if (frameWatchdogTimer) clearTimeout(frameWatchdogTimer);
+        
         const detections = result.detections || [];
-        cardTargets.textContent = detections.length;
-        trackedCounter.textContent = `${detections.length} Lá`;
+        if (cardTargets) cardTargets.textContent = detections.length;
+        if (trackedCounter) trackedCounter.textContent = `${detections.length} Lá`;
+
+        // Update RTT Latency
+        if (lastFrameSentTime > 0) {
+          const rtt = Math.round(performance.now() - lastFrameSentTime);
+          if (cardLatency) cardLatency.textContent = rtt;
+          if (statLatency) statLatency.textContent = `${rtt}ms`;
+        }
+
+        // FPS calculation
+        const now = performance.now();
+        frameTimestamps.push(now);
+        while (frameTimestamps.length > 0 && frameTimestamps[0] <= now - 1000) {
+          frameTimestamps.shift();
+        }
+        const currentFps = frameTimestamps.length;
+        if (statFps) statFps.textContent = currentFps.toFixed(1);
+        if (cardFps) cardFps.textContent = currentFps.toFixed(1);
 
         currentDetections = detections.map((det, idx) => ({
           ...det,
@@ -1129,7 +1189,11 @@
           frameImageObj.onload = () => updateTrackedCardContainer(currentDetections);
           frameImageObj.src = lastCaptureObjectUrl;
         } else {
-          updateTrackedCardContainer([]);
+          updateTrackedCardContainer(currentDetections);
+        }
+
+        if (typeof updateHealthMeter === "function") {
+          updateHealthMeter(currentDetections);
         }
 
         const elapsed = performance.now() - lastFrameSentTime;
@@ -1321,631 +1385,6 @@
 
         requestAnimationFrame(renderLoop);
       }
-
-      // Send Frame (Real-time mode)
-      async function sendNextFrame() {
-        if (currentMode !== 'realtime' || !isStreaming || !ws || ws.readyState !== WebSocket.OPEN || isProcessingFrame) return;
-
-        if (video.videoWidth === 0) {
-          setTimeout(sendNextFrame, 100);
-          return;
-        }
-
-        isProcessingFrame = true;
-        
-        const maxSide = parseInt(selectResolution.value) || 640;
-        const scale = Math.min(1, maxSide / Math.max(video.videoWidth, video.videoHeight));
-        captureCanvas.width = Math.round(video.videoWidth * scale);
-        captureCanvas.height = Math.round(video.videoHeight * scale);
-
-        statResolution.textContent = `${captureCanvas.width}x${captureCanvas.height}`;
-
-        const ctx = captureCanvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-
-        const quality = parseFloat(sliderQuality.value) / 100;
-        lastFrameSentTime = performance.now();
-        
-        captureCanvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              isProcessingFrame = false;
-              return;
-            }
-
-            lastCaptureBlob = blob;
-            const sizeKb = blob.size / 1024;
-            payloadSizeSum += sizeKb;
-            payloadSizeCount++;
-            cardPayload.textContent = (payloadSizeSum / payloadSizeCount).toFixed(1);
-
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(blob);
-            } else {
-              isProcessingFrame = false;
-            }
-          },
-          "image/jpeg",
-          quality
-        );
-      }
-
-      let currentDetections = [];
-        let selectedLeafId = null;
-
-      // Drawing Bounding Boxes and Polygons (Used in all modes)
-      function drawBoundingBoxes(ctx) {
-        const w = overlay.width;
-        const h = overlay.height;
-
-        const baseScale = Math.max(1.0, Math.min(w, h) / 480);
-        const lineW = Math.max(5, Math.round(5.0 * baseScale));
-
-        currentDetections.forEach((det, detIdx) => {
-          const leafId = det.track_id !== null && det.track_id !== undefined ? det.track_id : `leaf-${detIdx + 1}`;
-          det._assignedId = leafId;
-          const isSelected = selectedLeafId !== null && (String(selectedLeafId) === String(leafId));
-
-          const originalFrame = det.originalFrameSize || { width: w, height: h };
-          const scaleX = w / originalFrame.width;
-          const scaleY = h / originalFrame.height;
-
-          const [x1_orig, y1_orig, x2_orig, y2_orig] = det.bbox_xyxy;
-          const x1 = x1_orig * scaleX;
-          const y1 = y1_orig * scaleY;
-          const x2 = x2_orig * scaleX;
-          const y2 = y2_orig * scaleY;
-
-          const label = det.stable_disease?.label || det.disease?.label || "healthy";
-          const isHealthy = label.toLowerCase().includes("healthy");
-          
-          // Ultra Vibrant Highlight for Selected Leaf (Neon Cyan & Electric Glow)
-          const strokeStyleColor = isSelected ? "#00e5ff" : (isHealthy ? "#22c55e" : "#ef4444");
-          const glowColor = isSelected ? "rgba(0, 229, 255, 1.0)" : (isHealthy ? "rgba(34, 197, 94, 0.55)" : "rgba(239, 68, 68, 0.55)");
-          const secondaryColor = isSelected ? "rgba(0, 229, 255, 0.40)" : (isHealthy ? "rgba(34, 197, 94, 0.25)" : "rgba(239, 68, 68, 0.25)");
-          
-          // Draw mask polygon if available
-          if (det.mask_xy && det.mask_xy.length > 0) {
-            ctx.save();
-            ctx.beginPath();
-            det.mask_xy.forEach((pt, ptIdx) => {
-              const px = pt[0] * scaleX;
-              const py = pt[1] * scaleY;
-              if (ptIdx === 0) ctx.moveTo(px, py);
-              else ctx.lineTo(px, py);
-            });
-            ctx.closePath();
-            
-            ctx.fillStyle = secondaryColor;
-            ctx.fill();
-            
-            ctx.shadowColor = glowColor;
-            ctx.shadowBlur = Math.round((isSelected ? 26 : 8) * baseScale);
-            ctx.strokeStyle = strokeStyleColor;
-            ctx.lineWidth = lineW + (isSelected ? 5 : 0);
-            ctx.lineJoin = "round";
-            ctx.lineCap = "round";
-            ctx.stroke();
-            
-            // Double stroke ring if selected for maximum contrast
-            if (isSelected) {
-              ctx.strokeStyle = "#ffffff";
-              ctx.lineWidth = Math.max(2, Math.round(2 * baseScale));
-              ctx.stroke();
-            }
-            ctx.restore();
-          } else {
-            ctx.save();
-            ctx.shadowColor = glowColor;
-            ctx.shadowBlur = Math.round((isSelected ? 26 : 8) * baseScale);
-            ctx.strokeStyle = strokeStyleColor;
-            ctx.lineWidth = lineW + (isSelected ? 5 : 0);
-            ctx.lineJoin = "round";
-            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-            
-            ctx.fillStyle = secondaryColor;
-            ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
-
-            if (isSelected) {
-              ctx.strokeStyle = "#ffffff";
-              ctx.lineWidth = Math.max(2, Math.round(2 * baseScale));
-              ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-            }
-            ctx.restore();
-          }
-
-          // Badge tag
-          const conf = det.stable_disease?.confidence || det.disease?.confidence || 0;
-          const viLabel = formatLabel(label);
-          const text = `${isSelected ? '👉 [ĐANG CHỌN] ' : ''}#${leafId} ${viLabel} • ${(conf * 100).toFixed(0)}%`;
-          
-          const fontSize = Math.max(16, Math.round((isSelected ? 20 : 18) * baseScale));
-          ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif`;
-          const textMetrics = ctx.measureText(text);
-          const textWidth = textMetrics.width;
-          const padH = Math.round(14 * baseScale);
-          const padV = Math.round(8 * baseScale);
-          const barHeight = fontSize + padV * 2;
-          const barWidth = textWidth + padH * 2;
-          
-          let tagY = y1 - barHeight - (4 * baseScale);
-          let tagX = x1;
-          
-          if (tagY < 0) tagY = y1 + (6 * baseScale);
-          if (tagX + barWidth > w) tagX = Math.max(0, w - barWidth - 4);
-          
-          const radius = Math.round(8 * baseScale);
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(tagX + radius, tagY);
-          ctx.lineTo(tagX + barWidth - radius, tagY);
-          ctx.quadraticCurveTo(tagX + barWidth, tagY, tagX + barWidth, tagY + radius);
-          ctx.lineTo(tagX + barWidth, tagY + barHeight - radius);
-          ctx.quadraticCurveTo(tagX + barWidth, tagY + barHeight, tagX + barWidth - radius, tagY + barHeight);
-          ctx.lineTo(tagX + radius, tagY + barHeight);
-          ctx.quadraticCurveTo(tagX, tagY + barHeight, tagX, tagY + barHeight - radius);
-          ctx.lineTo(tagX, tagY + radius);
-          ctx.quadraticCurveTo(tagX, tagY, tagX + radius, tagY);
-          ctx.closePath();
-          
-          ctx.shadowColor = glowColor;
-          ctx.shadowBlur = Math.round(12 * baseScale);
-          ctx.fillStyle = isSelected ? "#0284c7" : strokeStyleColor;
-          ctx.fill();
-          
-          ctx.shadowColor = "transparent";
-          ctx.fillStyle = "#ffffff";
-          ctx.textBaseline = "middle";
-          ctx.fillText(text, tagX + padH, tagY + padV + (fontSize / 2));
-          ctx.restore();
-        });
-      }
-
-      function processStaticPredictions(result) {
-        loadingOverlay.classList.add("hidden");
-        
-        const detections = result.detections || [];
-        cardTargets.textContent = detections.length;
-        trackedCounter.textContent = `${detections.length} Lá`;
-        cardLatency.textContent = "-";
-
-        currentDetections = detections.map((det, idx) => ({
-          ...det,
-          _assignedId: det.track_id !== null && det.track_id !== undefined ? det.track_id : `leaf-${idx + 1}`,
-          originalFrameSize: result.frame
-        }));
-
-        // Draw results on overlay canvas
-        const ctx = overlay.getContext("2d");
-        ctx.clearRect(0, 0, overlay.width, overlay.height);
-        if (frameImageObj && frameImageObj.complete && frameImageObj.naturalWidth > 0) {
-          ctx.drawImage(frameImageObj, 0, 0, overlay.width, overlay.height);
-        }
-        drawBoundingBoxes(ctx);
-
-        // Clear and rebuild cards
-        trackedTargets.clear();
-        const targetList = document.getElementById("target-list");
-        targetList.innerHTML = "";
-        
-        if (currentDetections.length === 0) {
-          targetList.innerHTML = `
-            <div id="target-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-400">
-              <div class="w-12 h-12 rounded-full border border-dashed border-pastel-border flex items-center justify-center mb-4">
-                <i data-lucide="scan-line" class="w-6 h-6 text-zinc-300"></i>
-              </div>
-              <p class="text-sm font-bold text-zinc-500 font-display">Không phát hiện lá cây</p>
-              <p class="text-xs text-zinc-400 max-w-[200px] mt-1.5 leading-relaxed">Hãy thử chọn ảnh chụp gần hơn hoặc rõ nét hơn.</p>
-            </div>
-          `;
-        } else {
-          updateTrackedCardContainer(currentDetections);
-        }
-        
-        if (typeof updateHealthMeter === "function") {
-          updateHealthMeter(currentDetections);
-        }
-        if (typeof renderReports === "function") {
-          renderReports(currentDetections);
-        }
-        if (window.lucide) {
-          lucide.createIcons();
-        }
-      }
-
-      function generateCropDataUrl(det) {
-        try {
-          const [x1, y1, x2, y2] = det.bbox_xyxy;
-          const boxWidth = x2 - x1;
-          const boxHeight = y2 - y1;
-          
-          if (boxWidth <= 0 || boxHeight <= 0) return null;
-          
-          const resultFrame = det.originalFrameSize || {
-            width: frameImageObj.naturalWidth,
-            height: frameImageObj.naturalHeight
-          };
-          const scaleX = frameImageObj.naturalWidth / resultFrame.width;
-          const scaleY = frameImageObj.naturalHeight / resultFrame.height;
-          if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY)) return null;
-
-          const cropCanvas = document.createElement("canvas");
-          cropCanvas.width = Math.max(1, Math.round(boxWidth * scaleX));
-          cropCanvas.height = Math.max(1, Math.round(boxHeight * scaleY));
-          
-          const ctx = cropCanvas.getContext("2d");
-          
-          // Clip to leaf polygon if mask_xy is present
-          if (det.mask_xy && det.mask_xy.length > 0) {
-            ctx.beginPath();
-            det.mask_xy.forEach((pt, ptIdx) => {
-              const px = (pt[0] - x1) * scaleX;
-              const py = (pt[1] - y1) * scaleY;
-              if (ptIdx === 0) ctx.moveTo(px, py);
-              else ctx.lineTo(px, py);
-            });
-            ctx.closePath();
-            ctx.clip();
-          }
-          
-          ctx.drawImage(
-            frameImageObj,
-            x1 * scaleX, y1 * scaleY, boxWidth * scaleX, boxHeight * scaleY,
-            0, 0, cropCanvas.width, cropCanvas.height
-          );
-          
-          return cropCanvas.toDataURL("image/jpeg", 0.7);
-        } catch (err) {
-          return null;
-        }
-      }
-
-      // Comprehensive Vietnamese Remedies & Treatment Suggestions Database
-      const REMEDIES = {
-        'black pepper footrot': {
-          title: 'Bệnh Chết Nhanh (Thối Gốc Rễ)',
-          pathogen: 'Nấm Phytophthora capsici',
-          symptoms: 'Lá héo rũ nhanh, cuống lá thối đen, rụng đồng loạt khi lá còn xanh, cổ rễ và thân thối nhũn có mùi hôi chua.',
-          remedy: 'Xử lý ngay: (1) Đào rãnh thoát nước, cách ly cây bệnh; (2) Tưới gốc & phun tán bằng Metalaxyl + Mancozeb (Ridomil Gold 68WG) hoặc Fosetyl-Aluminium (Aliette 800WG); (3) Rải vôi bột khử trùng quanh gốc và bổ sung chế phẩm nấm đối kháng Trichoderma.',
-          tag: 'Cực kỳ nguy hiểm',
-          color: 'text-rose-600',
-          badgeBg: 'bg-rose-100 text-rose-800 border-rose-300'
-        },
-        'footrot': {
-          title: 'Bệnh Chết Nhanh (Thối Gốc Rễ)',
-          pathogen: 'Nấm Phytophthora capsici',
-          symptoms: 'Lá héo rũ nhanh, cuống lá thối đen, rụng đồng loạt khi lá còn xanh, cổ rễ và thân thối nhũn.',
-          remedy: 'Tưới gốc bằng Ridomil Gold 68WG hoặc Aliette 800WG, thoát nước tốt mùa mưa, bón vôi và nấm Trichoderma.',
-          tag: 'Cực kỳ nguy hiểm',
-          color: 'text-rose-600',
-          badgeBg: 'bg-rose-100 text-rose-800 border-rose-300'
-        },
-        'black pepper slow decline': {
-          title: 'Bệnh Chết Chậm (Tuyến Trùng & Nấm)',
-          pathogen: 'Tuyến trùng Meloidogyne incognita + Nấm Fusarium / Rhizoctonia',
-          symptoms: 'Lá vàng từ từ từ dưới gốc lên ngọn, gân lá úa vàng, rễ có các nốt sần u bướu và thối rễ tơ, cây còi cọc rụng lá.',
-          remedy: 'Biện pháp phục hồi: (1) Tưới thuốc diệt tuyến trùng Fluopyram (Velum Prime 400SC) hoặc Abamectin (Tervigo 020SC); (2) Tưới nấm đối kháng Paecilomyces lilacinus kết hợp Trichoderma; (3) Bón phân hữu cơ hoai mục, humic kích rễ mới.',
-          tag: 'Bệnh mãn tính',
-          color: 'text-amber-600',
-          badgeBg: 'bg-amber-100 text-amber-800 border-amber-300'
-        },
-        'slow decline': {
-          title: 'Bệnh Chết Chậm (Tuyến Trùng & Nấm)',
-          pathogen: 'Tuyến trùng Meloidogyne + Nấm Fusarium',
-          symptoms: 'Lá vàng dần từ dưới lên, rễ có nốt sần u bướu, cây sinh trưởng còi cọc.',
-          remedy: 'Tưới thuốc đặc trị tuyến trùng Tervigo hoặc Velum Prime, bổ sung hữu cơ vi sinh và Trichoderma.',
-          tag: 'Bệnh mãn tính',
-          color: 'text-amber-600',
-          badgeBg: 'bg-amber-100 text-amber-800 border-amber-300'
-        },
-        'black pepper pollu disease': {
-          title: 'Bệnh Thán Thư (Pollu Disease)',
-          pathogen: 'Nấm Colletotrichum gloeosporioides',
-          symptoms: 'Vết đốm hình tròn hoặc bất định màu nâu xám, mép có quầng vàng, tâm vết bệnh hoại tử khô rách lá, chùm quả bị rụng thâm đen.',
-          remedy: 'Kiểm soát: (1) Cắt tỉa cành thông thoáng, dọn sạch tàn dư lá rụng; (2) Phun thuốc trừ nấm Amistar Top 325SC (Azoxystrobin + Difenoconazole), Score 250EC hoặc Antracol 70WP; (3) Phun 2 lần cách nhau 7-10 ngày khi phát hiện vết bệnh đầu tiên.',
-          tag: 'Lây lan nhanh',
-          color: 'text-orange-600',
-          badgeBg: 'bg-orange-100 text-orange-800 border-orange-300'
-        },
-        'pollu disease': {
-          title: 'Bệnh Thán Thư (Pollu Disease)',
-          pathogen: 'Nấm Colletotrichum gloeosporioides',
-          symptoms: 'Đốm hoại tử khô màu nâu đen có quầng vàng, làm khô thủng phiến lá.',
-          remedy: 'Tỉa cành thông thoáng, phun Amistar Top 325SC hoặc Antracol 70WP.',
-          tag: 'Lây lan nhanh',
-          color: 'text-orange-600',
-          badgeBg: 'bg-orange-100 text-orange-800 border-orange-300'
-        },
-        'black pepper yellow mottle virus': {
-          title: 'Bệnh Khảm Vàng Lá Virus',
-          pathogen: 'Piper Yellow Mottle Virus (PYMoV) & CMV',
-          symptoms: 'Phiến lá xuất hiện các vệt loang lổ sọc vàng xanh xen kẽ, lá biến dạng cong queo gợn sóng, đọt non ngắn lại.',
-          remedy: 'Quản lý lây nhiễm: (1) Bệnh do virus không có thuốc hóa học trị khỏi hoàn toàn; (2) Tiêu hủy hoặc cách ly trụ bệnh nặng tránh lây lan; (3) Phun thuốc diệt rầy mềm, rệp sáp môi giới truyền virus (Confidor 200SL, Movento 150OD); (4) Khử trùng dao kéo cắt tỉa bằng cồn 70 độ.',
-          tag: 'Virus lây truyền',
-          color: 'text-yellow-600',
-          badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-300'
-        },
-        'yellow mottle virus': {
-          title: 'Bệnh Khảm Vàng Lá Virus',
-          pathogen: 'Virus PYMoV / CMV',
-          symptoms: 'Lá khảm loang lổ vàng xanh, phiến lá nhăn nheo biến dạng.',
-          remedy: 'Phun trừ rệp sáp, rầy mềm môi giới truyền bệnh (Movento, Confidor), cách ly cây bệnh.',
-          tag: 'Virus lây truyền',
-          color: 'text-yellow-600',
-          badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-300'
-        },
-        'black pepper leaf blight': {
-          title: 'Bệnh Cháy Lá (Leaf Blight)',
-          pathogen: 'Nấm Phomopsis / Corticium salmonicolor',
-          symptoms: 'Các mảng cháy khô loang lổ màu nâu sẫm lan dần từ mép lá vào gân chính, mặt dưới có thể xuất hiện mạng sợi nấm trắng/hồng nhạt.',
-          remedy: 'Khắc phục: (1) Cắt tỉa bớt tán lá rậm rạp ở tầng gốc sát mặt đất; (2) Phun thuốc gốc đồng Copper Oxychloride (Coc85), Champion 77WP hoặc Hexaconazole (Anvil 5SC); (3) Tránh tưới nước đọng trực tiếp lên lá vào chiều muộn.',
-          tag: 'Cần xử lý sớm',
-          color: 'text-red-600',
-          badgeBg: 'bg-red-100 text-red-800 border-red-300'
-        },
-        'leaf blight': {
-          title: 'Bệnh Cháy Lá (Leaf Blight)',
-          pathogen: 'Nấm Phomopsis / Corticium',
-          symptoms: 'Mảng cháy xém khô giòn lan rộng từ mép lá.',
-          remedy: 'Cắt tỉa lá sát gốc, phun thuốc gốc đồng Coc85 hoặc Anvil 5SC.',
-          tag: 'Cần xử lý sớm',
-          color: 'text-red-600',
-          badgeBg: 'bg-red-100 text-red-800 border-red-300'
-        },
-        'black pepper healthy': {
-          title: 'Lá Hồ Tiêu Khỏe Mạnh',
-          pathogen: 'Không có mầm bệnh',
-          symptoms: 'Phiến lá xanh mướt, dày bóng, cân đối, không có vết tổn thương hay đốm nấm.',
-          remedy: 'Tiếp tục duy trì chế độ canh tác hữu cơ bền vững: Bón phân NPK cân đối theo mùa, bổ sung trung vi lượng (Ca, Mg, Zn, Bo), tưới đủ ẩm và thăm vườn định kỳ 1-2 lần/tuần.',
-          tag: 'Khỏe mạnh',
-          color: 'text-pastel-greenDark',
-          badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300'
-        },
-        'healthy': {
-          title: 'Lá Cây Khỏe Mạnh',
-          pathogen: 'Không có mầm bệnh',
-          symptoms: 'Tán lá xanh tươi, quang hợp tốt.',
-          remedy: 'Duy trì chế độ chăm sóc, bón phân cân đối và tưới tiêu hợp lý.',
-          tag: 'Khỏe mạnh',
-          color: 'text-pastel-greenDark',
-          badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300'
-        }
-      }
-
-      // Render diagnosis cards
-      function updateTrackedCardContainer(detections) {
-        const now = Date.now();
-        const activeIdsThisFrame = new Set();
-
-        detections.forEach(det => {
-          const trackId = det.track_id !== null ? det.track_id : `leaf-${Math.random().toString(36).substr(2, 4)}`;
-          activeIdsThisFrame.add(trackId);
-
-          const labelInfo = det.stable_disease || det.disease || { label: "Unknown", confidence: 0 };
-          const label = labelInfo.label;
-          const conf = labelInfo.confidence;
-          const isHealthy = label.toLowerCase().includes("healthy");
-
-          const cropUrl = generateCropDataUrl(det);
-
-          // Find remedies suggestions
-          const cleanKey = label.toLowerCase().replace(/_/g, " ").trim();
-          const remedyInfo = REMEDIES[cleanKey] || {
-            title: formatLabel(label),
-            remedy: `Identified foliage condition: ${formatLabel(label)}. Keep monitoring foliage and isolate if symptoms spread.`,
-            color: isHealthy ? "text-emerald-400" : "text-amber-400"
-          };
-
-          if (!trackedTargets.has(trackId)) {
-            const cardEl = document.createElement("div");
-            cardEl.id = `target-card-${trackId}`;
-            cardEl.className = "bg-white border-4 border-pastel-border rounded-3xl p-3 flex flex-col gap-2 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer animate-slide-in select-none";
-            
-            cardEl.innerHTML = `
-              <div class="flex gap-3.5">
-                <div class="h-16 w-16 bg-pastel-cream rounded-xl overflow-hidden border-2 border-pastel-border flex-shrink-0 flex items-center justify-center relative shadow-inner">
-                  <img id="thumb-${trackId}" src="${cropUrl || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'></svg>'}" class="object-cover w-full h-full" />
-                  <span class="absolute top-1 left-1 bg-pastel-greenDark/80 px-1.5 py-0.5 rounded-lg text-[8px] font-bold font-mono text-white">ID: ${trackId}</span>
-                </div>
-                
-                <div class="flex-1 min-w-0 flex flex-col justify-between">
-                  <div>
-                    <div class="flex justify-between items-start gap-1">
-                      <h4 class="font-bold text-xs text-pastel-greenDark truncate font-display" id="label-${trackId}">${formatLabel(label)}</h4>
-                      <span id="badge-${trackId}" class="px-2.5 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap ${isHealthy ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'}">
-                        ${isHealthy ? 'Khỏe mạnh' : 'Phát hiện bệnh'}
-                      </span>
-                    </div>
-                    <p class="text-[9px] text-zinc-550 mt-0.5 font-medium">Độ tin cậy phát hiện: ${(det.leaf_confidence * 100).toFixed(0)}%</p>
-                  </div>
-                  
-                  <div class="mt-2">
-                    <div class="flex justify-between text-[9px] text-zinc-550 font-bold mb-1">
-                      <span>Độ chính xác chẩn đoán</span>
-                      <span class="text-zinc-700 font-mono" id="conf-${trackId}">${(conf * 100).toFixed(0)}%</span>
-                    </div>
-                    <div class="w-full bg-zinc-100 border border-zinc-200 rounded-full h-1.5 overflow-hidden shadow-inner">
-                      <div id="progress-${trackId}" class="h-full rounded-full transition-all duration-300 ${isHealthy ? 'bg-pastel-green' : 'bg-pastel-pink'}" style="width: ${conf * 100}%"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Collapsible remedy details block -->
-              <div id="remedy-drawer-${trackId}" class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out border-t border-transparent">
-                <div class="pt-2.5 mt-1 border-t border-pastel-border flex flex-col gap-1">
-                  <div class="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-pastel-greenDark">
-                    <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-pastel-green"></i> Hướng Dẫn & Biện Pháp Xử Lý:
-                  </div>
-                  <p class="text-[10px] text-zinc-600 leading-relaxed font-sans">${remedyInfo.remedy}</p>
-                </div>
-              </div>
-
-              <!-- Click indicators at bottom card center -->
-              <div class="flex justify-center mt-1 -mb-1">
-                <i data-lucide="chevron-down" id="expand-indicator-${trackId}" class="w-3.5 h-3.5 text-zinc-550 transition-transform duration-300"></i>
-              </div>
-            `;
-
-            // Expand / Collapse click handler
-            cardEl.onclick = (e) => {
-              e.stopPropagation();
-              const drawer = cardEl.querySelector(`#remedy-drawer-${trackId}`);
-              const indicator = cardEl.querySelector(`#expand-indicator-${trackId}`);
-              const isClosed = drawer.style.maxHeight === "" || drawer.style.maxHeight === "0px";
-              
-              if (isClosed) {
-                drawer.style.maxHeight = drawer.scrollHeight + "px";
-                drawer.classList.remove("border-transparent");
-                drawer.classList.add("border-pastel-border");
-                if (indicator) indicator.style.transform = "rotate(180deg)";
-              } else {
-                drawer.style.maxHeight = "0px";
-                drawer.classList.add("border-transparent");
-                drawer.classList.remove("border-pastel-border");
-                if (indicator) indicator.style.transform = "rotate(0deg)";
-              }
-            };
-
-            targetList.appendChild(cardEl);
-            trackedTargets.set(trackId, {
-              elementId: cardEl.id,
-              lastSeen: now,
-              cardElement: cardEl
-            });
-            lucide.createIcons({ container: cardEl });
-          } else {
-            const target = trackedTargets.get(trackId);
-            target.lastSeen = now;
-
-            const card = target.cardElement;
-            const imgEl = card.querySelector(`#thumb-${trackId}`);
-            const labelEl = card.querySelector(`#label-${trackId}`);
-            const badgeEl = card.querySelector(`#badge-${trackId}`);
-            const confEl = card.querySelector(`#conf-${trackId}`);
-            const progressEl = card.querySelector(`#progress-${trackId}`);
-
-            if (cropUrl) imgEl.src = cropUrl;
-            labelEl.textContent = formatLabel(label);
-            confEl.textContent = `${(conf * 100).toFixed(0)}%`;
-            progressEl.style.width = `${conf * 100}%`;
-
-            if (isHealthy) {
-              badgeEl.className = "px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200";
-              badgeEl.textContent = "Healthy";
-              progressEl.className = "h-full rounded-full transition-all duration-300 bg-pastel-green";
-            } else {
-              badgeEl.className = "px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-200";
-              badgeEl.textContent = "Diseased";
-              progressEl.className = "h-full rounded-full transition-all duration-300 bg-pastel-pink";
-            }
-          }
-        });
-
-        // Expire targets in real-time mode only
-        if (currentMode === 'realtime') {
-          trackedTargets.forEach((target, trackId) => {
-            if (now - target.lastSeen > TRACK_EXPIRY_MS) {
-              target.cardElement.classList.add("opacity-0", "scale-95");
-              setTimeout(() => {
-                target.cardElement.remove();
-                trackedTargets.delete(trackId);
-                checkEmptyState();
-              }, 300);
-            }
-          });
-        }
-
-        checkEmptyState();
-      }
-
-      function checkEmptyState() {
-        if (trackedTargets.size === 0) {
-          targetEmptyState.classList.remove("hidden");
-        } else {
-          targetEmptyState.classList.add("hidden");
-        }
-      }
-
-      function clearDetections() {
-        currentDetections = [];
-        trackedTargets.forEach((target) => target.cardElement.remove());
-        trackedTargets.clear();
-        cardTargets.textContent = "0";
-        trackedCounter.textContent = "0 Active";
-        checkEmptyState();
-
-        const ctx = overlay.getContext("2d");
-        ctx.clearRect(0, 0, overlay.width, overlay.height);
-      }
-
-      // Stream control play/pause
-      btnStreamToggle.onclick = () => {
-        if (isStreaming) {
-          stopCamera();
-        } else {
-          startCamera();
-        }
-      };
-
-      btnStartOverlay.onclick = () => {
-        startCamera();
-      };
-
-      // Settings drawer toggler
-      const btnSettingsToggle = document.getElementById("btn-settings-toggle");
-      const quickSettingsDrawer = document.getElementById("quick-settings-drawer");
-      
-      btnSettingsToggle.onclick = (e) => {
-        e.stopPropagation();
-        const isOpen = quickSettingsDrawer.classList.contains("opacity-100");
-        if (isOpen) {
-          quickSettingsDrawer.classList.remove("opacity-100", "translate-y-0", "pointer-events-auto");
-          quickSettingsDrawer.classList.add("opacity-0", "-translate-y-4", "pointer-events-none");
-        } else {
-          quickSettingsDrawer.classList.add("opacity-100", "translate-y-0", "pointer-events-auto");
-          quickSettingsDrawer.classList.remove("opacity-0", "-translate-y-4", "pointer-events-none");
-        }
-      };
-
-      document.addEventListener("click", (e) => {
-        if (quickSettingsDrawer && !quickSettingsDrawer.contains(e.target) && e.target !== btnSettingsToggle && !btnSettingsToggle.contains(e.target)) {
-          quickSettingsDrawer.classList.remove("opacity-100", "translate-y-0", "pointer-events-auto");
-          quickSettingsDrawer.classList.add("opacity-0", "-translate-y-4", "pointer-events-none");
-        }
-      });
-
-      // Camera grid alignment lines toggler
-      const btnGridToggle = document.getElementById("btn-grid-toggle");
-      const cameraGrid = document.getElementById("camera-grid");
-      
-      btnGridToggle.onclick = () => {
-        const isActive = cameraGrid.classList.toggle("active");
-        if (isActive) {
-          btnGridToggle.classList.add("text-emerald-400", "bg-zinc-800");
-          showToast("Alignment grid enabled", "success");
-        } else {
-          btnGridToggle.classList.remove("text-emerald-400", "bg-zinc-800");
-          showToast("Alignment grid disabled");
-        }
-      };
-
-      // Reset tracker state
-      btnResetTracker.onclick = () => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "reset" }));
-        } else {
-          const wsUrl = inputWsUrl.value;
-          const httpUrl = getHttpUrl(wsUrl);
-          
-          fetch(`${httpUrl}/tracker/reset`, { method: "POST" })
-            .then(res => {
-              if (res.ok) showToast("Tracker reset successfully", "success");
-            })
-            .catch(() => showToast("Failed to reset tracker: check API connection", "error"));
-        }
-        clearDetections();
-      };
 
       // Mode 2: Capture Snapshot Action
       btnCaptureAction.onclick = async () => {
