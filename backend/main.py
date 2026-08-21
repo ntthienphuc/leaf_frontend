@@ -16,10 +16,12 @@ from fastapi.staticfiles import StaticFiles
 
 try:
     from core.config import settings
+    from core.device import device_info
     from core.pipeline import LeafDiseasePipeline
     from core.session import UserSessionContext
 except ImportError:
     from backend.core.config import settings
+    from backend.core.device import device_info
     from backend.core.pipeline import LeafDiseasePipeline
     from backend.core.session import UserSessionContext
 
@@ -102,6 +104,7 @@ def health() -> dict:
     return {
         "ok": True,
         "device": pipeline.device,
+        "runtime": device_info(pipeline.device),
         "detector": str(settings.leaf_detector_path),
         "classifier": str(settings.disease_classifier_path),
         "classes": pipeline.classifier.class_names,

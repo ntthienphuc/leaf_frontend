@@ -9,6 +9,7 @@ import numpy as np
 from ultralytics import YOLO
 
 from .classifier import DiseaseClassifier
+from .device import resolve_device
 from .session import UserSessionContext
 
 
@@ -79,13 +80,7 @@ class LeafDiseasePipeline:
 
     @staticmethod
     def _resolve_device(device: str) -> str:
-        if device == "auto":
-            try:
-                import torch
-                return "cuda" if torch.cuda.is_available() else "cpu"
-            except Exception:
-                return "cpu"
-        return device
+        return resolve_device(device)
 
     def create_session(self, session_id: str | None = None) -> UserSessionContext:
         """Create an isolated session context for a new WebSocket user."""

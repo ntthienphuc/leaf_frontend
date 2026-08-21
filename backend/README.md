@@ -43,6 +43,10 @@ LEAF_MAX_ASPECT_RATIO=6.0
 
 The disease crop is expanded to a square before classification. `LEAF_CLASSIFIER_INTERVAL=3` reuses a tracked leaf's classifier result for up to two intermediate frames, while `LEAF_CLASSIFIER_MOTION_THRESHOLD=0.08` forces a refresh when the tracked crop moves or changes size substantially.
 
+Device selection is automatic by default. With `LEAF_DEVICE=auto`, the backend uses the first CUDA GPU when the runtime exposes one and falls back to CPU otherwise. `LEAF_DEVICE=cuda:0`, `LEAF_DEVICE=0`, and `LEAF_DEVICE=cpu` are also accepted; an unavailable CUDA request safely falls back to CPU. Check `/health` to see the resolved device, CUDA runtime, and GPU name.
+
+The Docker image installs CUDA-enabled PyTorch wheels. They remain CPU-compatible, so the same image works on a CPU Space and automatically uses a Hugging Face GPU after a hardware upgrade. Do not set `LEAF_DEVICE=cpu` unless you deliberately want to disable that GPU.
+
 For the rented GPU server, use `LEAF_DETECTOR_IMGSZ=960` and keep the frontend capture limit at 960px when leaves are small in the camera view. The free CPU Hugging Face Space is suitable for smoke tests and still images, not low-latency live inference.
 
 ### JSON Response Format

@@ -10,6 +10,8 @@ import torch
 import torch.nn as nn
 from torchvision import models, transforms
 
+from .device import resolve_device
+
 
 class DiseaseClassifier:
     def __init__(self, checkpoint_path: Path, device: str = "auto", image_size: int = 320) -> None:
@@ -50,9 +52,7 @@ class DiseaseClassifier:
 
     @staticmethod
     def _resolve_device(device: str) -> str:
-        if device == "auto":
-            return "cuda" if torch.cuda.is_available() else "cpu"
-        return device
+        return resolve_device(device)
 
     @staticmethod
     def _build_model(model_name: str, num_classes: int) -> nn.Module:
@@ -93,8 +93,8 @@ class DiseaseClassifier:
 
         batch_tensor = torch.stack(tensors).to(self.device, non_blocking=True)
 
-        if self.device == "cuda":
-            with torch.amp.autocast("cuda"):
+        if self.device.startswith("cuda"):
+            with torch.amp.autocast(device_type="cuda"):
                 logits = self.model(batch_tensor)
         else:
             logits = self.model(batch_tensor)
