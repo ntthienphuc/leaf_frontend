@@ -2,6 +2,7 @@ tracker_type: bytetrack
 track_high_thresh: 0.25
 track_low_thresh: 0.10
 new_track_thresh: 0.25
-track_buffer: 30
+# At the frontend's capped 15 FPS, preserve an ID for roughly 3 seconds.
+track_buffer: 45
 match_thresh: 0.80
 fuse_score: true

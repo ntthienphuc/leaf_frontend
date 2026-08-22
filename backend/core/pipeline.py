@@ -28,6 +28,7 @@ class LeafDiseasePipeline:
         detector_imgsz: int = 640,
         detector_conf: float = 0.45,
         detector_iou: float = 0.5,
+        tracker_detection_conf: float = 0.10,
         classifier_imgsz: int = 320,
         classifier_conf: float = 0.35,
         min_leaf_area_ratio: float = 0.002,
@@ -50,6 +51,7 @@ class LeafDiseasePipeline:
         self.detector_imgsz = detector_imgsz
         self.detector_conf = detector_conf
         self.detector_iou = detector_iou
+        self.tracker_detection_conf = self._confidence_threshold(tracker_detection_conf, 0.10)
         self.classifier_conf = classifier_conf
         self.min_leaf_area_ratio = min_leaf_area_ratio
         self.max_leaf_area_ratio = max_leaf_area_ratio
@@ -115,12 +117,13 @@ class LeafDiseasePipeline:
 
         ctx.frame_index += 1
 
-        # 1. Stateless YOLO Detection / Segmentation
+        # Run YOLO below the UI threshold so ByteTrack can bridge brief weak detections.
+        inference_conf = min(det_threshold, self.tracker_detection_conf) if use_tracker else det_threshold
         with self._predict_lock:
             results = self.detector.predict(
                 source=frame_bgr,
                 imgsz=self.detector_imgsz,
-                conf=det_threshold,
+                conf=inference_conf,
                 iou=self.detector_iou,
                 device=self.device,
                 verbose=False,
@@ -128,16 +131,9 @@ class LeafDiseasePipeline:
 
         result = results[0]
         detections = []
-        if result.boxes is None or len(result.boxes) == 0:
-            return {
-                "frame": {"width": width, "height": height},
-                "detections": detections,
-            }
 
-        boxes = result.boxes.xyxy.detach().cpu().numpy()
-        det_scores = result.boxes.conf.detach().cpu().numpy()
-
-        # 2. Per-Session ByteTrack Update
+        # Update even on empty frames. ByteTrack's lost-track timeout is measured
+        # in processed frames, so skipping this would make its lifecycle inconsistent.
         track_id_map: dict[int, int] = {}
         if use_tracker:
             tracks = ctx.update_tracker(result.boxes)
@@ -149,6 +145,15 @@ class LeafDiseasePipeline:
                     if orig_idx >= 0:
                         track_id_map[orig_idx] = t_id
 
+        if result.boxes is None or len(result.boxes) == 0:
+            return {
+                "frame": {"width": width, "height": height},
+                "detections": detections,
+            }
+
+        boxes = result.boxes.xyxy.detach().cpu().numpy()
+        det_scores = result.boxes.conf.detach().cpu().numpy()
+
         # 3. Mask extraction & Douglas-Peucker Polygon Simplification
         has_masks = result.masks is not None and len(result.masks) > 0
         masks_data = result.masks.data if has_masks else None
@@ -156,6 +161,9 @@ class LeafDiseasePipeline:
 
         candidate_leaves = []
         for index, box in enumerate(boxes):
+            # Weak detections are tracker-only; never show or classify them.
+            if float(det_scores[index]) < det_threshold:
+                continue
             x1, y1, x2, y2 = self._pad_box(box, width, height)
             poly_list = None
             mask_resized = None

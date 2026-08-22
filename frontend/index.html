@@ -678,6 +678,9 @@
       let isDrawing = false;
       let isProcessingFrame = false;
       let targetFrameRate = 15;
+      // Clear stale UI quickly, but retain ByteTrack state long enough to recover an ID.
+      const STALE_UI_CLEAR_AFTER_MS = 800;
+      const TRACKER_RESET_AFTER_MS = 3000;
       let frameWatchdogTimer = null;
       let lastFrameSentTime = 0;
       let frameTimestamps = [];
@@ -1126,6 +1129,7 @@
 
       let lastLeafDetectedTime = Date.now();
       let hasSentAutoReset = false;
+      let hasClearedStaleUi = false;
 
       function processDetections(result) {
         if (frameWatchdogTimer) clearTimeout(frameWatchdogTimer);
@@ -1137,17 +1141,23 @@
         if (detections.length > 0) {
           lastLeafDetectedTime = Date.now();
           hasSentAutoReset = false;
+          hasClearedStaleUi = false;
         } else {
-          // If no leaves detected for >= 1.0s (1000ms), auto clear tracker & cards
-          if (Date.now() - lastLeafDetectedTime >= 1000) {
+          const missingForMs = Date.now() - lastLeafDetectedTime;
+          // Cards disappear promptly, while ByteTrack retains the ID in case the
+          // same leaf returns after a short occlusion or detector flicker.
+          if (!hasClearedStaleUi && missingForMs >= STALE_UI_CLEAR_AFTER_MS) {
+            hasClearedStaleUi = true;
+            clearDetections();
+            if (typeof updateHealthMeter === "function") updateHealthMeter([]);
+          }
+          if (missingForMs >= TRACKER_RESET_AFTER_MS) {
             if (!hasSentAutoReset) {
               hasSentAutoReset = true;
               if (ws && ws.readyState === WebSocket.OPEN) {
                 try { ws.send(JSON.stringify({ type: "reset" })); } catch (e) {}
               }
             }
-            clearDetections();
-            if (typeof updateHealthMeter === "function") updateHealthMeter([]);
           }
         }
 

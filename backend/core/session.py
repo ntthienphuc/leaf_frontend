@@ -56,7 +56,7 @@ class UserSessionContext:
                 track_high_thresh=0.25,
                 track_low_thresh=0.10,
                 new_track_thresh=0.25,
-                track_buffer=30,
+                track_buffer=45,
                 match_thresh=0.80,
                 fuse_score=True,
             )
@@ -64,7 +64,7 @@ class UserSessionContext:
 
     def update_tracker(self, boxes: Any) -> np.ndarray:
         """Update the per-session tracker with detection boxes."""
-        if boxes is None or len(boxes) == 0:
+        if boxes is None:
             return np.empty((0, 8), dtype=np.float32)
         try:
             return self.tracker.update(boxes)

@@ -36,6 +36,7 @@ class Settings:
     detector_imgsz: int = int(os.getenv("LEAF_DETECTOR_IMGSZ", "640"))
     detector_conf: float = float(os.getenv("LEAF_DETECTOR_CONF", "0.45"))
     detector_iou: float = float(os.getenv("LEAF_DETECTOR_IOU", "0.5"))
+    tracker_detection_conf: float = float(os.getenv("LEAF_TRACKER_DETECTION_CONF", "0.10"))
     classifier_imgsz: int = int(os.getenv("DISEASE_CLASSIFIER_IMGSZ", "320"))
     classifier_conf: float = float(os.getenv("DISEASE_CLASSIFIER_CONF", "0.35"))
     min_leaf_area_ratio: float = float(os.getenv("LEAF_MIN_AREA_RATIO", "0.002"))

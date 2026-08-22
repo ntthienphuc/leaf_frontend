@@ -32,6 +32,7 @@ The backend uses YOLO confidence plus post-processing filters before disease cla
 
 ```text
 LEAF_DETECTOR_CONF=0.45
+LEAF_TRACKER_DETECTION_CONF=0.10
 DISEASE_CLASSIFIER_CONF=0.35
 LEAF_MIN_AREA_RATIO=0.002
 LEAF_MAX_AREA_RATIO=0.70
@@ -40,6 +41,8 @@ LEAF_MAX_ASPECT_RATIO=6.0
 ```
 
 `LEAF_DETECTOR_CONF` controls YOLO confidence. The other `LEAF_*` filters reject detections that are too small, too large, or too thin. The current detector is a one-class rectangular-bbox model; the legacy segmentation checkpoint remains supported only as a fallback.
+
+`LEAF_TRACKER_DETECTION_CONF` is deliberately lower than the display threshold. These weak detections are passed only to ByteTrack to preserve an existing ID through a short detection flicker; they are never shown or classified. `track_buffer: 45` keeps an ID for about three seconds at the frontend's 15 FPS cap.
 
 The disease crop is expanded to a square before classification. `LEAF_CLASSIFIER_INTERVAL=3` reuses a tracked leaf's classifier result for up to two intermediate frames, while `LEAF_CLASSIFIER_MOTION_THRESHOLD=0.08` forces a refresh when the tracked crop moves or changes size substantially.
 
