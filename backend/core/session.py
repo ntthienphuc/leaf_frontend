@@ -40,6 +40,11 @@ class UserSessionContext:
         self.history: dict[int | str, deque[dict[str, float]]] = defaultdict(
             lambda: deque(maxlen=self.smoothing_window)
         )
+        # ByteTrack IDs can swap when two same-class leaves overlap. Keep a
+        # short spatial identity layer above it so classifier state follows the
+        # physical leaf rather than a transient tracker assignment.
+        self.stable_tracks: dict[int, dict[str, Any]] = {}
+        self.next_stable_id: int = 1
 
         # Dynamic runtime thresholds (configured per-session from UI)
         self.detector_conf: float | None = None
@@ -71,9 +76,108 @@ class UserSessionContext:
         except Exception:
             return np.empty((0, 8), dtype=np.float32)
 
+    @staticmethod
+    def _box_iou(left: np.ndarray, right: np.ndarray) -> float:
+        x1 = max(float(left[0]), float(right[0]))
+        y1 = max(float(left[1]), float(right[1]))
+        x2 = min(float(left[2]), float(right[2]))
+        y2 = min(float(left[3]), float(right[3]))
+        intersection = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+        left_area = max(1.0, float(left[2] - left[0])) * max(1.0, float(left[3] - left[1]))
+        right_area = max(1.0, float(right[2] - right[0])) * max(1.0, float(right[3] - right[1]))
+        return intersection / max(1.0, left_area + right_area - intersection)
+
+    def stabilize_track_ids(self, tracks: np.ndarray) -> dict[int, int]:
+        """Map current tracker rows to short-term spatially stable IDs."""
+        if tracks is None or len(tracks) == 0:
+            for state in self.stable_tracks.values():
+                state["missed"] = int(state.get("missed", 0)) + 1
+            self._prune_stable_tracks()
+            return {}
+
+        current: list[dict[str, Any]] = []
+        for row in tracks:
+            if len(row) < 8:
+                continue
+            current.append({
+                "row": row,
+                "box": np.asarray(row[:4], dtype=np.float32),
+                "raw_id": int(row[4]),
+                "orig_idx": int(row[7]),
+            })
+
+        # Greedy highest-quality matching is sufficient for the small number of
+        # leaves in a camera frame and avoids a scipy dependency.
+        matches: list[tuple[float, int, int]] = []
+        spatial_candidate_indices: set[int] = set()
+        for current_index, item in enumerate(current):
+            box = item["box"]
+            current_center = np.array([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2])
+            current_diag = max(1.0, float(np.hypot(box[2] - box[0], box[3] - box[1])))
+            for stable_id, state in self.stable_tracks.items():
+                previous = state["box"]
+                previous_center = np.array([(previous[0] + previous[2]) / 2, (previous[1] + previous[3]) / 2])
+                distance = float(np.linalg.norm(current_center - previous_center) / current_diag)
+                iou = self._box_iou(box, previous)
+                area = max(1.0, float((box[2] - box[0]) * (box[3] - box[1])))
+                previous_area = max(1.0, float((previous[2] - previous[0]) * (previous[3] - previous[1])))
+                area_change = abs(np.log(area / previous_area))
+                score = iou - 0.30 * min(distance, 3.0) - 0.08 * min(area_change, 3.0)
+                if iou >= 0.02 or distance <= 1.25:
+                    matches.append((score, current_index, stable_id))
+                    spatial_candidate_indices.add(current_index)
+
+        # A rapid camera pan can move every leaf beyond the spatial gate. In
+        # that case, retain ByteTrack's raw association as a fallback only;
+        # spatial matches always take precedence when leaves are close enough
+        # to be confused with one another.
+        for current_index, item in enumerate(current):
+            if current_index in spatial_candidate_indices:
+                continue
+            for stable_id, state in self.stable_tracks.items():
+                if int(state.get("raw_id", -1)) == item["raw_id"]:
+                    matches.append((-10.0, current_index, stable_id))
+
+        matches.sort(reverse=True)
+        assigned_current: set[int] = set()
+        assigned_stable: set[int] = set()
+        current_to_stable: dict[int, int] = {}
+        for _, current_index, stable_id in matches:
+            if current_index in assigned_current or stable_id in assigned_stable:
+                continue
+            assigned_current.add(current_index)
+            assigned_stable.add(stable_id)
+            current_to_stable[current_index] = stable_id
+
+        for current_index, item in enumerate(current):
+            stable_id = current_to_stable.get(current_index)
+            if stable_id is None:
+                stable_id = self.next_stable_id
+                self.next_stable_id += 1
+            item["stable_id"] = stable_id
+            self.stable_tracks[stable_id] = {
+                "box": item["box"].copy(),
+                "raw_id": item["raw_id"],
+                "missed": 0,
+            }
+
+        for stable_id, state in self.stable_tracks.items():
+            if stable_id not in current_to_stable.values() and stable_id not in {item["stable_id"] for item in current}:
+                state["missed"] = int(state.get("missed", 0)) + 1
+        self._prune_stable_tracks()
+        return {item["orig_idx"]: item["stable_id"] for item in current}
+
+    def _prune_stable_tracks(self) -> None:
+        max_missed = int(getattr(self.tracker, "max_frames_lost", 45))
+        expired = [sid for sid, state in self.stable_tracks.items() if int(state.get("missed", 0)) > max_missed]
+        for stable_id in expired:
+            self.stable_tracks.pop(stable_id, None)
+
     def reset(self) -> None:
         """Reset only this user's tracking and caching history."""
         self.tracker = self._build_tracker()
         self.frame_index = 0
         self.classification_cache.clear()
         self.history.clear()
+        self.stable_tracks.clear()
+        self.next_stable_id = 1

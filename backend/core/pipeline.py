@@ -137,13 +137,7 @@ class LeafDiseasePipeline:
         track_id_map: dict[int, int] = {}
         if use_tracker:
             tracks = ctx.update_tracker(result.boxes)
-            if len(tracks) > 0:
-                for row in tracks:
-                    # row format: [x1, y1, x2, y2, track_id, conf, cls, orig_idx]
-                    t_id = int(row[4])
-                    orig_idx = int(row[7]) if len(row) > 7 else -1
-                    if orig_idx >= 0:
-                        track_id_map[orig_idx] = t_id
+            track_id_map = ctx.stabilize_track_ids(tracks)
 
         if result.boxes is None or len(result.boxes) == 0:
             return {

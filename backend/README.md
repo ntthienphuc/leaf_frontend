@@ -44,6 +44,8 @@ LEAF_MAX_ASPECT_RATIO=6.0
 
 `LEAF_TRACKER_DETECTION_CONF` is deliberately lower than the display threshold. These weak detections are passed only to ByteTrack to preserve an existing ID through a short detection flicker; they are never shown or classified. `track_buffer: 45` keeps an ID for about three seconds at the frontend's 15 FPS cap.
 
+The backend adds a short-term spatial identity layer above ByteTrack. It matches box center, overlap, and area across frames so two nearby leaves cannot immediately exchange the classifier cache just because ByteTrack's raw IDs briefly swap.
+
 The disease crop is expanded to a square before classification. `LEAF_CLASSIFIER_INTERVAL=3` reuses a tracked leaf's classifier result for up to two intermediate frames, while `LEAF_CLASSIFIER_MOTION_THRESHOLD=0.08` forces a refresh when the tracked crop moves or changes size substantially.
 
 Device selection is automatic by default. With `LEAF_DEVICE=auto`, the backend uses the first CUDA GPU when the runtime exposes one and falls back to CPU otherwise. `LEAF_DEVICE=cuda:0`, `LEAF_DEVICE=0`, and `LEAF_DEVICE=cpu` are also accepted; an unavailable CUDA request safely falls back to CPU. Check `/health` to see the resolved device, CUDA runtime, and GPU name.
