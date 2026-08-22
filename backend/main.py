@@ -48,6 +48,7 @@ def get_pipeline() -> LeafDiseasePipeline:
         detector_conf=settings.detector_conf,
         detector_iou=settings.detector_iou,
         tracker_detection_conf=settings.tracker_detection_conf,
+        reid_enabled=settings.reid_enabled,
         classifier_imgsz=settings.classifier_imgsz,
         classifier_conf=settings.classifier_conf,
         min_leaf_area_ratio=settings.min_leaf_area_ratio,
@@ -112,6 +113,7 @@ def health() -> dict:
         "thresholds": {
             "detector_conf": settings.detector_conf,
             "tracker_detection_conf": settings.tracker_detection_conf,
+            "reid_enabled": pipeline.reid_enabled,
             "classifier_conf": settings.classifier_conf,
             "min_leaf_area_ratio": settings.min_leaf_area_ratio,
             "max_leaf_area_ratio": settings.max_leaf_area_ratio,

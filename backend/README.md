@@ -46,6 +46,8 @@ LEAF_MAX_ASPECT_RATIO=6.0
 
 The backend adds a short-term spatial identity layer above ByteTrack. It matches box center, overlap, and area across frames so two nearby leaves cannot immediately exchange the classifier cache just because ByteTrack's raw IDs briefly swap.
 
+On CUDA deployments (`LEAF_REID_ENABLED=auto`), it also extracts a normalized appearance embedding from the deployed EfficientNet-V2-S backbone and adds cosine similarity to the identity score. CPU deployments automatically disable this extra pass; set `LEAF_REID_ENABLED=true|false` to override.
+
 The disease crop is expanded to a square before classification. `LEAF_CLASSIFIER_INTERVAL=3` reuses a tracked leaf's classifier result for up to two intermediate frames, while `LEAF_CLASSIFIER_MOTION_THRESHOLD=0.08` forces a refresh when the tracked crop moves or changes size substantially.
 
 Device selection is automatic by default. With `LEAF_DEVICE=auto`, the backend uses the first CUDA GPU when the runtime exposes one and falls back to CPU otherwise. `LEAF_DEVICE=cuda:0`, `LEAF_DEVICE=0`, and `LEAF_DEVICE=cpu` are also accepted; an unavailable CUDA request safely falls back to CPU. Check `/health` to see the resolved device, CUDA runtime, and GPU name.

@@ -87,8 +87,13 @@ class UserSessionContext:
         right_area = max(1.0, float(right[2] - right[0])) * max(1.0, float(right[3] - right[1]))
         return intersection / max(1.0, left_area + right_area - intersection)
 
-    def stabilize_track_ids(self, tracks: np.ndarray) -> dict[int, int]:
-        """Map current tracker rows to short-term spatially stable IDs."""
+    def stabilize_track_ids(
+        self,
+        tracks: np.ndarray,
+        embeddings_by_index: dict[int, np.ndarray] | None = None,
+    ) -> dict[int, int]:
+        """Map tracker rows to stable IDs using geometry and optional appearance."""
+        embeddings_by_index = embeddings_by_index or {}
         if tracks is None or len(tracks) == 0:
             for state in self.stable_tracks.values():
                 state["missed"] = int(state.get("missed", 0)) + 1
@@ -104,6 +109,7 @@ class UserSessionContext:
                 "box": np.asarray(row[:4], dtype=np.float32),
                 "raw_id": int(row[4]),
                 "orig_idx": int(row[7]),
+                "embedding": embeddings_by_index.get(int(row[7])),
             })
 
         # Greedy highest-quality matching is sufficient for the small number of
@@ -123,6 +129,12 @@ class UserSessionContext:
                 previous_area = max(1.0, float((previous[2] - previous[0]) * (previous[3] - previous[1])))
                 area_change = abs(np.log(area / previous_area))
                 score = iou - 0.30 * min(distance, 3.0) - 0.08 * min(area_change, 3.0)
+                embedding = item["embedding"]
+                previous_embedding = state.get("embedding")
+                if embedding is not None and previous_embedding is not None:
+                    # Embeddings are L2 normalized, so dot product is cosine similarity.
+                    appearance = float(np.clip(np.dot(embedding, previous_embedding), -1.0, 1.0))
+                    score += 0.55 * appearance
                 if iou >= 0.02 or distance <= 1.25:
                     matches.append((score, current_index, stable_id))
                     spatial_candidate_indices.add(current_index)
@@ -155,9 +167,11 @@ class UserSessionContext:
                 stable_id = self.next_stable_id
                 self.next_stable_id += 1
             item["stable_id"] = stable_id
+            previous_state = self.stable_tracks.get(stable_id, {})
             self.stable_tracks[stable_id] = {
                 "box": item["box"].copy(),
                 "raw_id": item["raw_id"],
+                "embedding": item["embedding"] if item["embedding"] is not None else previous_state.get("embedding"),
                 "missed": 0,
             }
 

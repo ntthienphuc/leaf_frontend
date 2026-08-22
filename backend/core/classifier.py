@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchvision import models, transforms
 
 from .device import resolve_device
@@ -114,3 +115,37 @@ class DiseaseClassifier:
                 }
             )
         return results
+
+    def _tensor_batch(self, crops_bgr: Sequence[np.ndarray]) -> torch.Tensor:
+        tensors = []
+        for crop in crops_bgr:
+            if crop.size == 0:
+                crop = np.full((self.image_size, self.image_size, 3), 128, dtype=np.uint8)
+            crop_rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
+            tensors.append(self.transform(crop_rgb))
+        return torch.stack(tensors).to(self.device, non_blocking=True)
+
+    @torch.inference_mode()
+    def embed_batch(self, crops_bgr: Sequence[np.ndarray]) -> list[np.ndarray]:
+        """Extract normalized appearance embeddings for short-term identity matching."""
+        if not crops_bgr:
+            return []
+        batch_tensor = self._tensor_batch(crops_bgr)
+        if self.model_name == "efficientnet_v2_s":
+            def forward_features() -> torch.Tensor:
+                features = self.model.features(batch_tensor)
+                return torch.flatten(self.model.avgpool(features), 1)
+        elif self.model_name == "convnext_tiny":
+            def forward_features() -> torch.Tensor:
+                features = self.model.features(batch_tensor)
+                return torch.flatten(self.model.avgpool(features), 1)
+        else:
+            raise ValueError(f"Unsupported classifier model: {self.model_name}")
+
+        if self.device.startswith("cuda"):
+            with torch.amp.autocast(device_type="cuda"):
+                embeddings = forward_features()
+        else:
+            embeddings = forward_features()
+        embeddings = F.normalize(embeddings.float(), dim=1)
+        return [row.detach().cpu().numpy() for row in embeddings]

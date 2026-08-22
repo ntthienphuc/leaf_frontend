@@ -29,6 +29,7 @@ class LeafDiseasePipeline:
         detector_conf: float = 0.45,
         detector_iou: float = 0.5,
         tracker_detection_conf: float = 0.10,
+        reid_enabled: str = "auto",
         classifier_imgsz: int = 320,
         classifier_conf: float = 0.35,
         min_leaf_area_ratio: float = 0.002,
@@ -52,6 +53,8 @@ class LeafDiseasePipeline:
         self.detector_conf = detector_conf
         self.detector_iou = detector_iou
         self.tracker_detection_conf = self._confidence_threshold(tracker_detection_conf, 0.10)
+        reid_value = str(reid_enabled).strip().lower()
+        self.reid_enabled = self.device.startswith("cuda") if reid_value == "auto" else reid_value in {"1", "true", "yes", "on"}
         self.classifier_conf = classifier_conf
         self.min_leaf_area_ratio = min_leaf_area_ratio
         self.max_leaf_area_ratio = max_leaf_area_ratio
@@ -135,11 +138,13 @@ class LeafDiseasePipeline:
         # Update even on empty frames. ByteTrack's lost-track timeout is measured
         # in processed frames, so skipping this would make its lifecycle inconsistent.
         track_id_map: dict[int, int] = {}
+        tracks = np.empty((0, 8), dtype=np.float32)
         if use_tracker:
             tracks = ctx.update_tracker(result.boxes)
-            track_id_map = ctx.stabilize_track_ids(tracks)
 
         if result.boxes is None or len(result.boxes) == 0:
+            if use_tracker:
+                ctx.stabilize_track_ids(tracks)
             return {
                 "frame": {"width": width, "height": height},
                 "detections": detections,
@@ -154,6 +159,7 @@ class LeafDiseasePipeline:
         masks_xy = result.masks.xy if has_masks else None
 
         candidate_leaves = []
+        appearance_crops: dict[int, np.ndarray] = {}
         for index, box in enumerate(boxes):
             # Weak detections are tracker-only; never show or classify them.
             if float(det_scores[index]) < det_threshold:
@@ -183,21 +189,42 @@ class LeafDiseasePipeline:
             else:
                 crop = frame_bgr[y1:y2, x1:x2]
 
+            if crop.size:
+                appearance_crops[index] = crop
+
             if not self._passes_leaf_filters(box, mask_resized, width, height):
                 continue
             if crop.size == 0:
                 continue
 
-            track_id = track_id_map.get(index)
             candidate_leaves.append({
                 "index": index,
                 "box": box,
                 "bbox_xyxy": [x1, y1, x2, y2],
                 "poly_list": poly_list,
                 "leaf_conf": float(det_scores[index]),
-                "track_id": track_id,
+                "track_id": None,
                 "crop": crop,
             })
+
+        if use_tracker:
+            embeddings_by_index: dict[int, np.ndarray] = {}
+            if self.reid_enabled and len(tracks) > 0:
+                indexed_crops = []
+                indexed_indices = []
+                for row in tracks:
+                    orig_idx = int(row[7]) if len(row) > 7 else -1
+                    crop = appearance_crops.get(orig_idx)
+                    if orig_idx >= 0 and crop is not None and crop.size:
+                        indexed_indices.append(orig_idx)
+                        indexed_crops.append(crop)
+                if indexed_crops:
+                    with self._predict_lock:
+                        embeddings = self.classifier.embed_batch(indexed_crops)
+                    embeddings_by_index = dict(zip(indexed_indices, embeddings))
+            track_id_map = ctx.stabilize_track_ids(tracks, embeddings_by_index)
+            for leaf in candidate_leaves:
+                leaf["track_id"] = track_id_map.get(leaf["index"])
 
         if not candidate_leaves:
             return {
